@@ -1,6 +1,6 @@
 # Remote Workflows
 
-Execute your workflow activities partitioned to server and remote tasks for repeatable, reliable asynchronous workflow processes.
+Execute your streaming workflow activities partitioned to server and remote tasks for repeatable, reliable asynchronous workflow processes.
 
 ## Features
 * Bi-Directional tasks' configuration updates, powered by gRPC streaming.
