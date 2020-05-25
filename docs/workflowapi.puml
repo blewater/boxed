@@ -1,0 +1,36 @@
+@startuml
+hide footbox
+
+actor OrgAdmin
+boundary "Cli"
+boundary TLAdmin
+entity TLWorkflow
+collections "OrgWorkflows[]"
+database "tradeline-fabric-config"
+
+OrgAdmin  --> TLAdmin : gRPC::SendOrgToken()
+TLAdmin -> TLWorkflow : InitWorkflow(token)
+TLWorkflow <- "OrgWorkflows[]" : NewWorkflow( token )
+    Activate TLWorkflow
+    TLWorkflow <- "tradeline-fabric-config": NewWorkflow( config )
+    TLWorkflow ->  TLWorkflow : RunMandatoryTasks()
+    TLWorkflow  --> Cli : Config <- gRPC::SendFabricConfig()
+
+        Activate Cli
+        Cli -> Cli : consume config
+        Cli --> TLWorkflow : gRPC:: SendTaskCompletionToServer()
+        TLWorkflow -> TLWorkflow : Run() -> Server Tasks
+        TLAdmin --> "Cli" : gRPC::SendCliTasks()
+        Cli -> Cli : runClientWorkflow()
+        Cli --> TLWorkflow : gRPC::SendCliTasksProgress()
+        TLWorkflow -> TLWorkflow : CopyCliTasksProgress()
+        TLWorkflow -> TLWorkflow : Run() -> Resume Tasks
+        TLWorkflow --> Cli : gRPC::SendWorkflowCompletion()
+        Cli --> TLAdmin !! : gRPC::SendClose()
+        return
+
+    TLAdmin -> TLWorkflow : OrgWorkflow.Save()
+    TLWorkflow -> "tradeline-fabric-config" : Save()
+
+    return
+@enduml

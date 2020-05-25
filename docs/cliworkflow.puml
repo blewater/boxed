@@ -1,0 +1,19 @@
+@startuml
+start
+:Send Org Token to Start or Resume Workflow;
+
+while ("Received Org Message from Server") is (Ok)
+    :io.EOF or errors?;
+    -> No;
+    :Print Server messages
+    Received Done Message?;
+    -> yes;
+    -> No;
+    :Init Orchestrator
+    from received config;
+    :Run Cli Tasks;
+    -> Send Cli Tasks Progress
+endwhile
+-Workflow Completed or any Error
+stop
+@enduml

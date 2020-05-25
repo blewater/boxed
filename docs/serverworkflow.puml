@@ -1,0 +1,32 @@
+@startuml
+start
+:Start gRPC server;
+
+while ("Received Org Message from Cli") is (Ok)
+    :Token Ok?;
+
+    :initialize
+        * Fabric Config
+        * Workflow;
+
+    :Process Cli Messages
+        Log Cli Output
+        Cli Task1 Success
+            .....
+        Cli Task2 Error;
+
+
+    :Start or Resume Server Workflow
+        Run TL Tasks
+            (...3 -> n)
+        Stop if...
+        Cli Tasks are next;
+
+    :Send Cli Tasks To Do;
+endwhile
+
+-Workflow Completed or any Error
+
+-Save Workflow Progress
+stop
+@enduml
