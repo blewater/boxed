@@ -1,0 +1,41 @@
+syntax = "proto3";
+package msg;
+import "google/protobuf/struct.proto";
+
+service TaskCommunicator {
+    rpc RunTasks(stream RemoteMsg) returns (stream ServerMsg) {}
+}
+
+// Server Message Task Message
+message ServerMsg {
+    // Fixed Workflow Properties
+    string taskInProgress = 1;
+    string taskOutput = 2;
+    repeated string clientTasks = 3;
+    string errorMsg = 4;
+    string datum = 5;
+    // Custom static configuration
+    repeated string data = 6;
+    // Custom dynamic json configuration
+    google.protobuf.Struct config = 7;
+}
+
+// Remote or Client Task Message
+message RemoteMsg {
+    // Fixed Workflow Properties
+    message Tasks {
+        string taskName = 1;
+        string errorMsg = 2;
+        bool completed = 3;
+    }
+    repeated Tasks tasks = 1;
+    string taskInProgress = 2;
+    bool tasksCompleted = 3;
+    string errorMsg = 4;
+    // Custom static configuration
+    string datum = 5;
+    repeated string data = 6;
+    // Custom dynamic json configuration
+    google.protobuf.Struct config = 7;
+}
+
