@@ -1,13 +1,11 @@
-package tasks
+package workflow
 
 import (
-	"context"
 	"fmt"
 	"time"
 
-	"github.com/tradeline-tech/protos/namespace"
-
-	"github.com/tradeline-tech/argo/pkg/logger"
+	"github.com/tradeline-tech/workflow/cfg"
+	"github.com/tradeline-tech/workflow/grpc"
 )
 
 // TaskType represents a unit of work that needs to happen on the server or client side
@@ -28,13 +26,14 @@ type TaskRunner interface {
 	// GetProp returns the task type
 	// TaskType contains the task data we save in mongo i.e. Name
 	GetProp() *TaskType
-	// PostCli saves any workflow configuration received from ClientMsg
-	// Called only by completed Cli Tasks
-	PostCli(msg *namespace.ClientMsg)
+	// PostRemoteTasksCompletion performs any server workflow task work upon
+	// completing the remote task work e.g., saving remote task configuration
+	// to workflow's state
+	PostRemoteTasksCompletion(msg *grpc.RemoteMsg)
 }
 
 // TaskRunnerNewFunc is the workflow runner constructor
-type TaskRunnerNewFunc = func(configType *TasksBootstrapConfiguration) TaskRunner
+type TaskRunnerNewFunc = func(cfg *cfg.TasksBootstrapConfiguration) TaskRunner
 
 type HandlerFuncType func() error
 
@@ -79,7 +78,7 @@ func ValidDo(runner TaskRunner) error {
 	if !task.AlwaysRun {
 		if errValidation := runner.Validate(); errValidation == nil {
 			task.setCompleted()
-			logger.Info(context.Background(), "Validate() succeeded exiting...")
+			fmt.Println("Validate() succeeded exiting...")
 
 			return nil
 		}
