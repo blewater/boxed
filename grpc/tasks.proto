@@ -13,8 +13,8 @@ message ServerMsg {
     string taskOutput = 2;
     repeated string remoteTasks = 3;
     string errorMsg = 4;
-    string datum = 5;
     // Custom static configuration
+    string datum = 5;
     repeated string data = 6;
     // Custom dynamic json configuration
     google.protobuf.Struct config = 7;
@@ -32,10 +32,12 @@ message RemoteMsg {
     string taskInProgress = 2;
     bool tasksCompleted = 3;
     string errorMsg = 4;
+    // required user provided workflow key ID
+    string workflowNameKey = 5;
     // Custom static configuration
-    string datum = 5;
-    repeated string data = 6;
+    string datum = 6;
+    repeated string data = 7;
     // Custom dynamic json configuration
-    google.protobuf.Struct config = 7;
+    google.protobuf.Struct config = 8;
 }
 
