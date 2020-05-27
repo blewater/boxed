@@ -11,6 +11,7 @@ import (
 
 	"github.com/tradeline-tech/workflow"
 	"github.com/tradeline-tech/workflow/cfg"
+	"github.com/tradeline-tech/workflow/datastore"
 	"github.com/tradeline-tech/workflow/grpc"
 	"github.com/tradeline-tech/workflow/server/tasks"
 )
@@ -247,7 +248,7 @@ func safeSaveWorkflow(srvWorkflow *workflow.Tasks) {
 
 	if srvWorkflow != nil {
 		// in the context of defer we absorb errors
-		_ = workflow.Save(ctx, srvWorkflow)
+		_ = datastore.Upsert(ctx, srvWorkflow)
 	}
 }
 
@@ -289,8 +290,9 @@ func (srv *WorkflowsServer) initWorkflow(ctx context.Context,
 	}
 
 	// 2nd Attempt to load workflow from the database
-	foundWorkflow, err = workflow.LoadByName(ctx, workflowNameKey)
+	foundWorkflow, err = readWorkflowFromDB(ctx, workflowNameKey)
 	if err != nil {
+		// TODO log err
 		return nil
 	}
 
@@ -326,6 +328,21 @@ func (srv *WorkflowsServer) initWorkflow(ctx context.Context,
 	srv.setMemCachedWorkflow(workflowNameKey, foundWorkflow)
 
 	return foundWorkflow
+}
+
+func readWorkflowFromDB(ctx context.Context, workflowNameKey string) (*workflow.Tasks, error) {
+	readDocument, err := datastore.LoadByName(ctx, workflowNameKey)
+	if err != nil {
+		// TODO log error
+		return nil, err
+	}
+
+	// type assert that the read document is a tasks type collection
+	foundWorkflow, okWorkflow := readDocument.(*workflow.Tasks)
+	if !okWorkflow {
+		return nil, errors.New("failed to convert read document to a workflow")
+	}
+	return foundWorkflow, nil
 }
 
 // handle multiple error cases:

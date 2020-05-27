@@ -14,6 +14,14 @@ const (
 	DefaultTimeoutInSeconds = 10
 )
 
+// DBDocument decouples workflow from the persistence operations
+type DBDocument interface {
+	GetID() interface{}
+	SetID(string) error
+	SetUpdatedAt(updatedAt time.Time)
+	SetCreatedAt(createdAt time.Time)
+}
+
 var (
 	dsURL, dsDatabase string
 	db                *mongo.Database

@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/tradeline-tech/workflow/cfg"
+	"github.com/tradeline-tech/workflow/datastore"
 	"github.com/tradeline-tech/workflow/grpc"
 )
 
@@ -60,6 +61,29 @@ func New(config *cfg.TasksBootstrapConfiguration, workflowName string,
 		LastTaskIndexCompleted: -1,
 		TasksConfig:            config,
 	}, nil
+}
+
+// DBDocument interface methods
+func (workflow *Tasks) GetID() interface{} {
+	return workflow.ID
+}
+
+func (workflow *Tasks) SetID(id string) error {
+
+	mongoID, err := primitive.ObjectIDFromHex(id)
+	if err == nil {
+		workflow.ID = mongoID
+	}
+
+	return err
+}
+
+func (workflow *Tasks) SetCreatedAt(createdAt time.Time) {
+	workflow.CreatedAt = createdAt
+}
+
+func (workflow *Tasks) SetUpdatedAt(updatedAt time.Time) {
+	workflow.UpdatedAt = updatedAt
 }
 
 // GetLen returns the workflow length of contained tasks
@@ -170,7 +194,7 @@ func (workflow *Tasks) doRemainingTasks(ctx context.Context) error {
 		workflow.LastTaskIndexCompleted = i
 		workflow.LastTaskNameCompleted = nextTaskRunner.GetProp().Name
 
-		if err = Save(ctx, workflow); err != nil {
+		if err = datastore.Upsert(ctx, workflow); err != nil {
 			return err
 		}
 	}
