@@ -1,4 +1,4 @@
-package workflow
+package common
 
 import (
 	"fmt"
@@ -23,17 +23,20 @@ type TaskRunner interface {
 	Do() error
 	Validate() error
 	Rollback() error
-	// GetProp returns the task type
+	// GetProp returns a task config property
+	GetProp(key string) (interface{}, bool)
+	// GetTask returns this runner's task
 	// TaskType contains the task data we save in mongo i.e. Name
-	GetProp() *TaskType
+	GetTask() *TaskType
 	// PostRemoteTasksCompletion performs any server workflow task work upon
 	// completing the remote task work e.g., saving remote task configuration
 	// to workflow's state
 	PostRemoteTasksCompletion(msg *grpc.RemoteMsg)
 }
 
-// TaskRunnerNewFunc is the workflow runner constructor
-type TaskRunnerNewFunc = func(cfg *cfg.TasksBootstrapConfiguration) TaskRunner
+// TaskRunnerNewFunc is a workflow task runner constructor
+type TaskRunnerNewFunc = func(cfg cfg.TaskConfiguration) TaskRunner
+type TaskRunners = []TaskRunnerNewFunc
 
 type HandlerFuncType func() error
 
@@ -72,7 +75,7 @@ func doAndRollback(do, rollback HandlerFuncType) error {
 // upon error -> Rollback(),
 // upon success Validate()
 func ValidDo(runner TaskRunner) error {
-	task := runner.GetProp()
+	task := runner.GetTask()
 
 	// If is a mandatory task do not validate in the beginning
 	if !task.AlwaysRun {
