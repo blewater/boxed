@@ -1,8 +1,8 @@
 package tasks
 
 import (
-	"github.com/tradeline-tech/workflow"
 	"github.com/tradeline-tech/workflow/cfg"
+	"github.com/tradeline-tech/workflow/common"
 	"github.com/tradeline-tech/workflow/grpc"
 )
 
@@ -13,16 +13,16 @@ const (
 // getWorkflowName is a remotely executed task
 // bootstrapping a workflow with a name
 type getWorkflowName struct {
-	Config *cfg.TasksBootstrapConfiguration
-	Task   *workflow.TaskType
+	Config cfg.TaskConfiguration
+	Task   *common.TaskType
 }
 
 // NewGetWorkflowName returns a new task that bootstraps a new workflow with a unique name
-func NewGetWorkflowName(config *cfg.TasksBootstrapConfiguration) workflow.TaskRunner {
+func NewGetWorkflowName(config cfg.TaskConfiguration) common.TaskRunner {
 	taskRunner := &getWorkflowName{
 		Config: config,
-		Task: &workflow.TaskType{
-			Name:     workflow.GetTaskName(),
+		Task: &common.TaskType{
+			Name:     common.GetTaskName(),
 			IsServer: false,
 		},
 	}
@@ -45,8 +45,13 @@ func (t *getWorkflowName) Rollback() error {
 	return nil
 }
 
-// GetProp of this task
-func (t *getWorkflowName) GetProp() *workflow.TaskType {
+// GetProp returns a task config property
+func (t *getWorkflowName) GetProp(key string) (interface{}, bool) {
+	return t.Config.Get(key)
+}
+
+// GetTask returns the task of this runner
+func (t *getWorkflowName) GetTask() *common.TaskType {
 	return t.Task
 }
 
