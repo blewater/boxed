@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	DefaultCollection       = "Workflow"
-	DefaultTimeoutInSeconds = 10
+	defaultCollection       = "Workflow"
+	defaultTimeoutInSeconds = 10
 )
 
 // DBDocument decouples workflow from the persistence operations
@@ -41,7 +41,7 @@ func NewDataStore(dbURL, dbDatabase, collectionName string) (*mongo.Database, er
 	dsDatabase = dbDatabase
 
 	var err error
-	db, err = connect(dbURL, dsDatabase, DefaultTimeoutInSeconds)
+	db, err = connect(dbURL, dsDatabase, defaultTimeoutInSeconds)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func NewDataStore(dbURL, dbDatabase, collectionName string) (*mongo.Database, er
 	if collectionName != "" {
 		dbCollection = db.Collection(collectionName)
 	} else {
-		dbCollection = db.Collection(DefaultCollection)
+		dbCollection = db.Collection(defaultCollection)
 	}
 
 	return db, err
@@ -58,14 +58,14 @@ func NewDataStore(dbURL, dbDatabase, collectionName string) (*mongo.Database, er
 // Connect the database client
 func connect(dbURL, database string, timeout time.Duration) (*mongo.Database, error) {
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*DefaultTimeoutInSeconds)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*defaultTimeoutInSeconds)
 	defer cancel()
 
 	// Use for explicit DefaultTimeoutInSeconds for connecting to Mongo
 	// Rather than waiting for the Mongo driver default timeout
 	clientOptions := options.Client().
 		ApplyURI(dbURL).
-		SetConnectTimeout(time.Second * DefaultTimeoutInSeconds)
+		SetConnectTimeout(time.Second * defaultTimeoutInSeconds)
 
 	dbClient, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
