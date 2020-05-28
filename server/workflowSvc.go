@@ -50,7 +50,7 @@ var (
 
 func recoverFromPanic() {
 	if r := recover(); r != nil {
-		logger.Debug(context.Background(), "recover:", r)
+// TODO .Debug(context.Background(), "recover:", r)
 	}
 }
 
@@ -123,19 +123,19 @@ func stepCheckIOError(ctx context.Context, remoteMsg *grpc.RemoteMsg, err error)
 	}
 
 	if err == io.EOF {
-		logger.Info(ctx, "server EOF:", err)
+// TODO .Info(ctx, "server EOF:", err)
 
 		return true
 	}
 
 	if err != nil {
-		logger.Error(ctx, err, "Message streaming error")
+// TODO .Error(ctx, err, "Message streaming error")
 
 		return true
 	}
 
 	if remoteMsg == nil {
-		logger.Info(ctx, "Received nil Client Message: Cli likely closed the connection. Closing the server connection...")
+// TODO .Info(ctx, "Received nil Client Message: Cli likely closed the connection. Closing the server connection...")
 
 		return true
 	}
@@ -148,13 +148,13 @@ func stepProcessReceivedMessages(ctx context.Context, remoteMsg *grpc.RemoteMsg,
 	workflow *types.Tasks) (nextAction int) {
 	if remoteMsg.TaskInProgress != "" {
 		if remoteMsg.ErrorMsg != "" {
-			logger.Error(ctx, errors.New(remoteMsg.ErrorMsg),
+// TODO .Error(ctx, errors.New(remoteMsg.ErrorMsg),
 				"Cli error while processing task:", remoteMsg.TaskInProgress)
 
 			fmt.Printf("Cli task %s erred: %s\n", remoteMsg.TaskInProgress, remoteMsg.ErrorMsg)
 
 			if err := workflow.CopyRemoteTasksProgress(remoteMsg); err != nil {
-				logger.Error(ctx, err, "while processing Cli messages")
+// TODO .Error(ctx, err, "while processing Cli messages")
 
 				return breakAction
 			}
@@ -166,7 +166,7 @@ func stepProcessReceivedMessages(ctx context.Context, remoteMsg *grpc.RemoteMsg,
 
 		cliTaskMsg := fmt.Sprintf("Cli tasks feedback: %s\n", remoteMsg.TaskInProgress)
 		fmt.Printf("%s\n", cliTaskMsg)
-		logger.Info(ctx, remoteMsg)
+// TODO .Info(ctx, remoteMsg)
 
 		return contAction
 	}
@@ -187,14 +187,14 @@ func stepWorkflowCompletedRemotely(
 	defer safeSaveWorkflow(workflow)
 
 	if err := workflow.CopyRemoteTasksProgress(remoteMsg); err != nil {
-		logger.Error(ctx, err, "server workflow state is invalid")
+// TODO .Error(ctx, err, "server workflow state is invalid")
 
 		return true
 	}
 
 	if workflow.SetWorkflowCompletedChecked(ctx) {
 		if err := grpc.SignalSrvWorkflowCompletion(stream, workflow.GetLen()); err != nil {
-			logger.Error(ctx, err, "completion messaging error")
+// TODO .Error(ctx, err, "completion messaging error")
 		}
 
 		return true

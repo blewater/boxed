@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
-	"github.com/tradeline-tech/argo/pkg/logger"
 )
 
 const (
@@ -30,7 +28,7 @@ func SendWorkflowNameKeyToSrv(ctx context.Context,
 	}
 
 	if err := stream.Send(&RemoteMsg{WorkflowNameKey: workflowNameKey}); err != nil {
-		logger.Error(ctx, err, "failed to stream a remote gRPC message to server")
+		// TODO .Error(ctx, err, "failed to stream a remote gRPC message to server")
 
 		return err
 	}
@@ -39,7 +37,8 @@ func SendWorkflowNameKeyToSrv(ctx context.Context,
 }
 
 // SendTasksErrorMsgToServer sends error message to the Server for current task execution error
-func SendTasksErrorMsgToServer(ctx context.Context, gRPCConn TaskCommunicator_RunWorkflowClient, workflowNameKey string, idx int, currentTaskName string, remoteTasks []*RemoteMsg_Tasks, err error) error {
+func SendTasksErrorMsgToServer(ctx context.Context, gRPCConn TaskCommunicator_RunWorkflowClient,
+	workflowNameKey string, idx int, currentTaskName string, remoteTasks []*RemoteMsg_Tasks, err error) error {
 	if workflowNameKey == "" {
 		fmt.Println(remoteTextWorkflowNameMissing)
 
@@ -55,7 +54,7 @@ func SendTasksErrorMsgToServer(ctx context.Context, gRPCConn TaskCommunicator_Ru
 	})
 
 	if errSend != nil {
-		logger.Error(ctx, errSend, "failed to send error to server", err)
+		// TODO .Error(ctx, errSend, "failed to send error to server", err)
 
 		return fmt.Errorf("error err:%v, errSEnd:%v", err, errSend)
 	}
@@ -80,7 +79,7 @@ func SendMsgToServer(ctx context.Context,
 	})
 
 	if errSend != nil {
-		logger.Error(ctx, errSend, "failed to send task status message")
+		// TODO .Error(ctx, errSend, "failed to send task status message")
 
 		return errSend
 	}
@@ -99,8 +98,7 @@ func SendTaskCompletionToServer(ctx context.Context,
 	}
 
 	outMsg := fmt.Sprintf("signaling remoted completion for tasks: %v\n", tasks)
-
-	logger.Debug(ctx, outMsg)
+	// TODO .Debug(ctx, outMsg)
 	fmt.Println(outMsg)
 
 	errSend := stream.Send(&RemoteMsg{
@@ -110,7 +108,7 @@ func SendTaskCompletionToServer(ctx context.Context,
 	})
 
 	if errSend != nil {
-		logger.Error(ctx, errSend, "failed to signal completion of the remote tasks to the server")
+		// TODO .Error(ctx, errSend, "failed to signal completion of the remote tasks to the server")
 
 		return errSend
 	}

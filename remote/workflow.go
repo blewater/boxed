@@ -10,8 +10,6 @@ import (
 	"github.com/tradeline-tech/workflow/pkg/config"
 	"github.com/tradeline-tech/workflow/types"
 
-	"github.com/tradeline-tech/argo/pkg/logger"
-
 	"github.com/tradeline-tech/workflow/grpc"
 )
 
@@ -34,7 +32,7 @@ func ProcessGRPCMessages(ctx context.Context,
 	defer endRemoteToSrvConnection(ctx, stream)
 
 	if err != nil {
-		logger.Error(ctx, err, "upon opening a streaming connection to the server")
+		// TODO .Error(ctx, err, "upon opening a streaming connection to the server")
 
 		return err
 	}
@@ -79,7 +77,7 @@ func ProcessGRPCMessages(ctx context.Context,
 
 func recoverFromPanic() {
 	if r := recover(); r != nil {
-		logger.Debug(context.Background(), "recover:", r)
+		// TODO logger.Debug(context.Background(), "recover:", r)
 	}
 }
 
@@ -92,14 +90,14 @@ func endRemoteToSrvConnection(ctx context.Context, stream grpc.TaskCommunicator_
 
 func handleMsgErr(ctx context.Context, err error, serverMsg *grpc.ServerMsg) error {
 	if err != nil {
-		logger.Error(ctx, err, " Failed to receive server messages: %v", err)
+		// TODO logger.Error(ctx, err, " Failed to receive server messages: %v", err)
 
 		return err
 	}
 
 	if serverMsg == nil {
 		nilMsgError := errors.New("received nil server message")
-		logger.Error(ctx, nilMsgError, "exiting")
+		// TODO logger.Error(ctx, nilMsgError, "exiting")
 
 		return nilMsgError
 	}
@@ -107,7 +105,7 @@ func handleMsgErr(ctx context.Context, err error, serverMsg *grpc.ServerMsg) err
 	serverErrMsg := serverMsg.ErrorMsg
 	if serverErrMsg != "" {
 		serverErr := errors.New(serverErrMsg)
-		logger.Error(ctx, serverErr, "received server error")
+		// TODO logger.Error(ctx, serverErr, "received server error")
 
 		return serverErr
 	}
@@ -115,46 +113,37 @@ func handleMsgErr(ctx context.Context, err error, serverMsg *grpc.ServerMsg) err
 	return nil
 }
 
+// Runs received tasks from the server gRPC connection.
+// Asserts that each received task name is located in the declared tasks folder.
+// Otherwise, it exits prematurely with error out and notifies the server.
 func runRemoteWorkflow(ctx context.Context,
-	remoteTaskRunners types.RemoteTaskRunnersByKey,
+	remoteTaskRunnersByKey types.RemoteTaskRunnersByKey,
 	workflowNameKey string,
 	remoteConfig config.TaskConfiguration,
 	remoteTaskNames []string,
 	stream grpc.TaskCommunicator_RunWorkflowClient) error {
-	var remoteentTaskRunners types.TaskRunners
-
 	if len(remoteTaskNames) > 0 {
 
-		remoteentTaskRunners = make(types.TaskRunners, 0, len(remoteTaskNames))
-
-		for idx, remoteTaskName := range remoteTaskNames {
-			taskRunner, ok := remoteTaskRunners[remoteTaskName]
-			if !ok {
-				if err := chkCliTaskExists(ctx, workflowNameKey, idx, remoteTaskRunners, remoteTaskName, stream); err != nil {
-					return err
-				}
-			}
-
-			if ok {
-				remoteentTaskRunners = append(remoteentTaskRunners, taskRunner)
-			}
+		taskRunners, err := getTaskRunnersToRun(ctx, remoteTaskRunnersByKey, workflowNameKey, remoteTaskNames, stream)
+		if err != nil {
+			return err
 		}
 
-		if len(remoteentTaskRunners) > 0 {
+		if len(taskRunners) > 0 {
 			if remoteConfig == nil {
 				errNilConfig := errors.New("remote configuration is nil. No Server configuration was sent")
-				logger.Error(ctx, errNilConfig)
+				// TODO .Error(ctx, errNilConfig)
 
 				return errNilConfig
 			}
 
-			remoteentWorkflow, err := types.NewWorkflow(remoteConfig, workflowNameKey, remoteentTaskRunners)
+			remoteTasks, err := types.NewWorkflow(remoteConfig, workflowNameKey, taskRunners)
 			if err != nil {
 				// TODO log error
 				return err
 			}
-			if err := runReceivedTasks(ctx, workflowNameKey, remoteentWorkflow, stream); err != nil {
-				logger.Error(ctx, err, "while running Cli tasks")
+			if err := runReceivedTasks(ctx, workflowNameKey, remoteTasks, stream); err != nil {
+				// TODO .Error(ctx, err, "while running Cli tasks")
 
 				return err
 			}
@@ -164,37 +153,66 @@ func runRemoteWorkflow(ctx context.Context,
 	return nil
 }
 
-// Checks whether it receives an unknown task name from the server to run here on Cli
-// and couldn't find it.
-func chkCliTaskExists(ctx context.Context,
-	token string,
-	idx int,
+// getTaskRunnersToRun maps the gRPC received task names to run and returns them.
+// upon a task mismatch, it notifies the server and errs.
+func getTaskRunnersToRun(ctx context.Context, remoteTaskRunnersMap types.RemoteTaskRunnersByKey,
+	workflowNameKey string, remoteTaskNames []string,
+	gRpcConn grpc.TaskCommunicator_RunWorkflowClient) (types.TaskRunners, error) {
+	taskRunners := make(types.TaskRunners, 0, len(remoteTaskNames))
+
+	for idx, remoteTaskName := range remoteTaskNames {
+		taskRunner, ok := remoteTaskRunnersMap[remoteTaskName]
+		if !ok {
+			if err := chkTaskExists(ctx, workflowNameKey, idx, remoteTaskRunnersMap, remoteTaskName, gRpcConn); err != nil {
+				return nil, err
+			}
+		}
+
+		if ok {
+			taskRunners = append(taskRunners, taskRunner)
+		}
+	}
+	return taskRunners, nil
+}
+
+// Checks whether it receives an unknown task name from the server to run.
+// Notifies server if sent task is not found.
+func chkTaskExists(ctx context.Context,
+	workflowNameKey string,
+	taskIdx int,
 	remoteTaskRunners types.RemoteTaskRunnersByKey,
 	remoteTaskName string, stream grpc.TaskCommunicator_RunWorkflowClient) error {
 	errMsg := fmt.Sprintf(
 		"received from server an unknown remote task name: %s. Cli task names: %v", remoteTaskName,
 		reflect.ValueOf(remoteTaskRunners).MapKeys())
-	grpcCliMsgTasks := []*grpc.RemoteMsg_Tasks{
+
+	gRpcRemoteMsgTasks := []*grpc.RemoteMsg_Tasks{
 		{
 			TaskName:  remoteTaskName,
 			ErrorMsg:  errMsg,
 			Completed: false,
 		},
 	}
-	errUnmatchedCliTask := errors.New(errMsg)
 
-	errWrapped := grpc.SendTasksErrorMsgToServer(ctx, stream, token, idx, remoteTaskName, grpcCliMsgTasks,
-		errUnmatchedCliTask)
+	errUnmatchedTask := errors.New(errMsg)
+	errWrapped := grpc.SendTasksErrorMsgToServer(ctx,
+		stream,
+		workflowNameKey,
+		taskIdx,
+		remoteTaskName,
+		gRpcRemoteMsgTasks,
+		errUnmatchedTask)
+
 	if errWrapped != nil {
 		return errWrapped
 	}
 
-	return errUnmatchedCliTask
+	return errUnmatchedTask
 }
 
 func runReceivedTasks(
 	ctx context.Context,
-	token string,
+	workflowNameKey string,
 	workflow *types.Tasks,
 	stream grpc.TaskCommunicator_RunWorkflowClient) error {
 	remoteTasks := make([]*grpc.RemoteMsg_Tasks, 0, len(workflow.TaskRunners))
@@ -204,8 +222,8 @@ func runReceivedTasks(
 
 		fmt.Println(msg)
 
-		if err := grpc.SendMsgToServer(ctx, stream, token, msg); err != nil {
-			logger.Error(ctx, err, "failed to send task status message")
+		if err := grpc.SendMsgToServer(ctx, stream, workflowNameKey, msg); err != nil {
+			// TODO .Error(ctx, err, "failed to send task status message")
 		}
 
 		if err := types.ValidDo(taskRunner); err != nil {
@@ -214,7 +232,7 @@ func runReceivedTasks(
 				ErrorMsg:  err.Error(),
 				Completed: false,
 			})
-			errWrapped := grpc.SendTasksErrorMsgToServer(ctx, stream, token, idx, workflow.Tasks[idx].Name, remoteTasks, err)
+			errWrapped := grpc.SendTasksErrorMsgToServer(ctx, stream, workflowNameKey, idx, workflow.Tasks[idx].Name, remoteTasks, err)
 			if errWrapped != nil {
 				return errWrapped
 			}
@@ -228,7 +246,7 @@ func runReceivedTasks(
 		})
 	}
 
-	if err := grpc.SendTaskCompletionToServer(ctx, stream, token, remoteTasks); err != nil {
+	if err := grpc.SendTaskCompletionToServer(ctx, stream, workflowNameKey, remoteTasks); err != nil {
 		return err
 	}
 
