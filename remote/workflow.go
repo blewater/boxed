@@ -64,7 +64,7 @@ func ProcessGRPCMessages(ctx context.Context,
 			break
 		}
 
-		// 7. Run any Cli-side tasks
+		// 7. Run any Remote-side tasks
 		remoteTasks := serverMsg.RemoteTasks
 		err = runRemoteWorkflow(ctx, remoteTaskRunners, workflowNameKey, cfg, remoteTasks, stream)
 		if err != nil {
@@ -143,7 +143,7 @@ func runRemoteWorkflow(ctx context.Context,
 				return err
 			}
 			if err := runReceivedTasks(ctx, workflowNameKey, remoteTasks, stream); err != nil {
-				// TODO .Error(ctx, err, "while running Cli tasks")
+				// TODO .Error(ctx, err, "while running Remote tasks")
 
 				return err
 			}
@@ -183,7 +183,7 @@ func chkTaskExists(ctx context.Context,
 	remoteTaskRunners types.RemoteTaskRunnersByKey,
 	remoteTaskName string, stream grpc.TaskCommunicator_RunWorkflowClient) error {
 	errMsg := fmt.Sprintf(
-		"received from server an unknown remote task name: %s. Cli task names: %v", remoteTaskName,
+		"received from server an unknown remote task name: %s. Remote task names: %v", remoteTaskName,
 		reflect.ValueOf(remoteTaskRunners).MapKeys())
 
 	gRpcRemoteMsgTasks := []*grpc.RemoteMsg_Tasks{

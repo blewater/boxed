@@ -108,7 +108,7 @@ func (t *TaskType) GetTaskTypeDesc() string {
 		return "server"
 	}
 
-	return "Cli"
+	return "Remote"
 }
 
 func (t *TaskType) setCompleted() {

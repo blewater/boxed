@@ -11,8 +11,8 @@ while ("Received Org Message from Server") is (Ok)
     -> No;
     :Init Orchestrator
     from received config;
-    :Run Cli Tasks;
-    -> Send Cli Tasks Progress
+    :Run Remote Tasks;
+    -> Send Remote Tasks Progress
 endwhile
 -Workflow Completed or any Error
 stop

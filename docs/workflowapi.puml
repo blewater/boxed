@@ -2,7 +2,7 @@
 hide footbox
 
 actor OrgAdmin
-boundary "Cli"
+boundary "Remote"
 boundary TLAdmin
 entity TLWorkflow
 collections "OrgWorkflows[]"
@@ -14,19 +14,19 @@ TLWorkflow <- "OrgWorkflows[]" : NewWorkflow( workflowNameKey )
     Activate TLWorkflow
     TLWorkflow <- "tradeline-fabric-config": NewWorkflow( config )
     TLWorkflow ->  TLWorkflow : RunMandatoryTasks()
-    TLWorkflow  --> Cli : Config <- gRPC::SendFabricConfig()
+    TLWorkflow  --> Remote : Config <- gRPC::SendFabricConfig()
 
-        Activate Cli
-        Cli -> Cli : consume config
-        Cli --> TLWorkflow : gRPC:: SendTaskCompletionToServer()
+        Activate Remote
+        Remote -> Remote : consume config
+        Remote --> TLWorkflow : gRPC:: SendTaskCompletionToServer()
         TLWorkflow -> TLWorkflow : Run() -> Server Tasks
-        TLAdmin --> "Cli" : gRPC::SendCliTasks()
-        Cli -> Cli : runClientWorkflow()
-        Cli --> TLWorkflow : gRPC::SendCliTasksProgress()
+        TLAdmin --> "Remote" : gRPC::SendCliTasks()
+        Remote -> Remote : runClientWorkflow()
+        Remote --> TLWorkflow : gRPC::SendCliTasksProgress()
         TLWorkflow -> TLWorkflow : CopyCliTasksProgress()
         TLWorkflow -> TLWorkflow : Run() -> Resume Tasks
-        TLWorkflow --> Cli : gRPC::SendWorkflowCompletion()
-        Cli --> TLAdmin !! : gRPC::SendClose()
+        TLWorkflow --> Remote : gRPC::SendWorkflowCompletion()
+        Remote --> TLAdmin !! : gRPC::SendClose()
         return
 
     TLAdmin -> TLWorkflow : OrgWorkflow.Save()

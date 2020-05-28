@@ -144,7 +144,7 @@ func (workflow *Tasks) InitTasksMemState(config config.TaskConfiguration,
 }
 
 // Run is the workflow runner for server tasks;
-// interrupts execution for Cli tasks
+// interrupts execution for Remote tasks
 func (workflow *Tasks) Run(ctx context.Context) (execErr error) {
 	if workflow.SetWorkflowCompletedChecked(ctx) {
 		return nil
@@ -253,7 +253,7 @@ func (workflow *Tasks) CopyRemoteTasksProgress(remoteMsg *grpc.RemoteMsg) error 
 		nextRemoteTask := remoteMsg.Tasks[remoteTaskIdx]
 
 		if nextWorkflowTask.IsServer || !strings.EqualFold(nextWorkflowTask.Name, nextRemoteTask.TaskName) {
-			return fmt.Errorf("error mismatch between next Cli task %s, Workflow task %s",
+			return fmt.Errorf("error mismatch between next Remote task %s, Workflow task %s",
 				nextRemoteTask.TaskName, nextWorkflowTask.Name)
 		}
 
@@ -274,9 +274,9 @@ func (workflow *Tasks) CopyRemoteTasksProgress(remoteMsg *grpc.RemoteMsg) error 
 	return nil
 }
 
-// Save Cli Tasks TasksConfig Results Here
-// Cli Task config answers -> workflow changes of the current tasks[LastIndexCompleted]
-// Checks if it's a Cli task and completed
+// Save Remote Tasks TasksConfig Results Here
+// Remote Task config answers -> workflow changes of the current tasks[LastIndexCompleted]
+// Checks if it's a Remote task and completed
 func (workflow *Tasks) saveRemoteConfigResults(remoteMsg *grpc.RemoteMsg) {
 	cliTask := workflow.Tasks[workflow.LastTaskIndexCompleted]
 	if cliTask.Completed && !cliTask.IsServer {

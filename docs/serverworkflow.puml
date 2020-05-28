@@ -2,27 +2,26 @@
 start
 :Start gRPC server;
 
-while ("Received Org Message from Cli") is (Ok)
+while ("Received Message from Remote Client") is (Ok)
     :WorkflowNameKey Ok?;
 
     :initialize
-        * Fabric Config
-        * Workflow;
+        Workflow Config;
 
-    :Process Cli Messages
-        Log Cli Output
-        Cli Task1 Success
+    :Process Remote Messages
+        Log Remote Output
+        Remote Task1 Success
             .....
-        Cli Task2 Error;
+        Remote Task2 Error;
 
 
     :Start or Resume Server Workflow
         Run TL Tasks
             (...3 -> n)
         Stop if...
-        Cli Tasks are next;
+        Remote Tasks are next;
 
-    :Send Cli Tasks To Do;
+    :Send Remote Tasks To Do;
 endwhile
 
 -Workflow Completed or any Error

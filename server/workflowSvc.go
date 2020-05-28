@@ -7,8 +7,6 @@ import (
 	"io"
 	"sync"
 
-	"github.com/tradeline-tech/argo/pkg/logger"
-
 	"github.com/tradeline-tech/workflow/datastore"
 	"github.com/tradeline-tech/workflow/grpc"
 	"github.com/tradeline-tech/workflow/pkg/config"
@@ -50,7 +48,7 @@ var (
 
 func recoverFromPanic() {
 	if r := recover(); r != nil {
-// TODO .Debug(context.Background(), "recover:", r)
+		// TODO .Debug(context.Background(), "recover:", r)
 	}
 }
 
@@ -123,19 +121,19 @@ func stepCheckIOError(ctx context.Context, remoteMsg *grpc.RemoteMsg, err error)
 	}
 
 	if err == io.EOF {
-// TODO .Info(ctx, "server EOF:", err)
+		// TODO .Info(ctx, "server EOF:", err)
 
 		return true
 	}
 
 	if err != nil {
-// TODO .Error(ctx, err, "Message streaming error")
+		// TODO .Error(ctx, err, "Message streaming error")
 
 		return true
 	}
 
 	if remoteMsg == nil {
-// TODO .Info(ctx, "Received nil Client Message: Cli likely closed the connection. Closing the server connection...")
+		// TODO .Info(ctx, "Received nil Client Message: Remote likely closed the connection. Closing the server connection...")
 
 		return true
 	}
@@ -148,13 +146,12 @@ func stepProcessReceivedMessages(ctx context.Context, remoteMsg *grpc.RemoteMsg,
 	workflow *types.Tasks) (nextAction int) {
 	if remoteMsg.TaskInProgress != "" {
 		if remoteMsg.ErrorMsg != "" {
-// TODO .Error(ctx, errors.New(remoteMsg.ErrorMsg),
-				"Cli error while processing task:", remoteMsg.TaskInProgress)
+			// TODO .Error(ctx, errors.New(remoteMsg.ErrorMsg),"logger error while processing task:", remoteMsg.TaskInProgress)
 
-			fmt.Printf("Cli task %s erred: %s\n", remoteMsg.TaskInProgress, remoteMsg.ErrorMsg)
+			fmt.Printf("Remote task %s erred: %s\n", remoteMsg.TaskInProgress, remoteMsg.ErrorMsg)
 
 			if err := workflow.CopyRemoteTasksProgress(remoteMsg); err != nil {
-// TODO .Error(ctx, err, "while processing Cli messages")
+				// TODO .Error(ctx, err, "while processing Remote messages")
 
 				return breakAction
 			}
@@ -164,9 +161,9 @@ func stepProcessReceivedMessages(ctx context.Context, remoteMsg *grpc.RemoteMsg,
 			return breakAction
 		}
 
-		cliTaskMsg := fmt.Sprintf("Cli tasks feedback: %s\n", remoteMsg.TaskInProgress)
+		cliTaskMsg := fmt.Sprintf("Remote tasks feedback: %s\n", remoteMsg.TaskInProgress)
 		fmt.Printf("%s\n", cliTaskMsg)
-// TODO .Info(ctx, remoteMsg)
+		// TODO .Info(ctx, remoteMsg)
 
 		return contAction
 	}
@@ -187,14 +184,14 @@ func stepWorkflowCompletedRemotely(
 	defer safeSaveWorkflow(workflow)
 
 	if err := workflow.CopyRemoteTasksProgress(remoteMsg); err != nil {
-// TODO .Error(ctx, err, "server workflow state is invalid")
+		// TODO .Error(ctx, err, "server workflow state is invalid")
 
 		return true
 	}
 
 	if workflow.SetWorkflowCompletedChecked(ctx) {
 		if err := grpc.SignalSrvWorkflowCompletion(stream, workflow.GetLen()); err != nil {
-// TODO .Error(ctx, err, "completion messaging error")
+			// TODO .Error(ctx, err, "completion messaging error")
 		}
 
 		return true
