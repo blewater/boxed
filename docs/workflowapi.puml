@@ -8,9 +8,9 @@ entity TLWorkflow
 collections "OrgWorkflows[]"
 database "tradeline-fabric-config"
 
-OrgAdmin  --> TLAdmin : gRPC::SendOrgToken()
-TLAdmin -> TLWorkflow : InitWorkflow(token)
-TLWorkflow <- "OrgWorkflows[]" : NewWorkflow( token )
+OrgAdmin  --> TLAdmin : gRPC::SendWorkflowNameKey()
+TLAdmin -> TLWorkflow : InitWorkflow(workflowNameKey)
+TLWorkflow <- "OrgWorkflows[]" : NewWorkflow( workflowNameKey )
     Activate TLWorkflow
     TLWorkflow <- "tradeline-fabric-config": NewWorkflow( config )
     TLWorkflow ->  TLWorkflow : RunMandatoryTasks()

@@ -204,7 +204,7 @@ func (workflow *Tasks) doRemainingTasks(ctx context.Context) error {
 }
 
 // SendRemoteTasks sends tasks that need to be executed remotely
-func (workflow *Tasks) SendRemoteTasksToDo(
+func (workflow *Tasks) SendRemoteTasksToRun(
 	gRPCSrv grpc.TaskCommunicator_RunWorkflowServer) (sentRemoteTasks bool, err error) {
 	if workflow.LastTaskIndexCompleted+1 >= workflow.GetLen() ||
 		workflow.Tasks[workflow.LastTaskIndexCompleted+1].IsServer {
@@ -227,7 +227,7 @@ func (workflow *Tasks) SendRemoteTasksToDo(
 		return false, nil
 	}
 
-	errSend := grpc.SendRemoteTasksToDo(gRPCSrv, remoteTaskNames)
+	errSend := grpc.SendRemoteTasksToRun(gRPCSrv, remoteTaskNames)
 
 	if errSend != nil {
 		return false, errSend

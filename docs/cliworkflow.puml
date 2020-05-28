@@ -1,6 +1,6 @@
 @startuml
 start
-:Send Org Token to Start or Resume Workflow;
+:Send Workflow Name Key to Start or Resume Workflow;
 
 while ("Received Org Message from Server") is (Ok)
     :io.EOF or errors?;

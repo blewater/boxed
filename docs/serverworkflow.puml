@@ -3,7 +3,7 @@ start
 :Start gRPC server;
 
 while ("Received Org Message from Cli") is (Ok)
-    :Token Ok?;
+    :WorkflowNameKey Ok?;
 
     :initialize
         * Fabric Config

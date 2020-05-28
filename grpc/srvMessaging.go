@@ -50,9 +50,9 @@ func SendServerTaskProgressToRemote(gRPCSrv TaskCommunicator_RunWorkflowServer,
 	return gRPCSrv.Send(msg)
 }
 
-// SendRemoteTasksToDo streams a message to the remote streaming connection
+// SendRemoteTasksToRun streams a message to the remote streaming connection
 // of tasks to execute
-func SendRemoteTasksToDo(gRPCSrv TaskCommunicator_RunWorkflowServer,
+func SendRemoteTasksToRun(gRPCSrv TaskCommunicator_RunWorkflowServer,
 	taskNames []string) error {
 	if len(taskNames) == 0 {
 		return errors.New("no remote tasks to send")

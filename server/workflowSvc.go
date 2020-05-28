@@ -70,9 +70,8 @@ func (srv *WorkflowsServer) GetgRPCServer() grpc.TaskCommunicator_RunWorkflowSer
 	return srv.gRPCServer
 }
 
-// RunTasks opens a bidirectional stream to the client
-// init fabric database config
-// runs workflow tasks for the org whose token the Cli sends in the gRPC stream
+// RunTasks opens a bidirectional stream to a remote client and
+// runs tasks with workflow name-key received from the remote gRPC client.
 func (srv *WorkflowsServer) RunTasks(stream grpc.TaskCommunicator_RunWorkflowServer) error {
 	var workflowReq = &types.Tasks{}
 
@@ -223,7 +222,7 @@ func stepRunServerSideTasks(ctx context.Context,
 func stepSendRemoteTasks(ctx context.Context,
 	serverWorkflow *types.Tasks,
 	gRPCSrv grpc.TaskCommunicator_RunWorkflowServer) (nextAction int) {
-	err := grpc.SendRemoteTasksToDo(gRPCSrv, serverWorkflow.GetPendingRemoteTaskNames())
+	err := grpc.SendRemoteTasksToRun(gRPCSrv, serverWorkflow.GetPendingRemoteTaskNames())
 	if err != nil {
 		fmt.Print(err, "sending remote task failed")
 
