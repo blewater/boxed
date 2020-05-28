@@ -9,19 +9,19 @@ import (
 
 	"github.com/tradeline-tech/argo/pkg/logger"
 
-	"github.com/tradeline-tech/workflow/common"
 	"github.com/tradeline-tech/workflow/datastore"
 	"github.com/tradeline-tech/workflow/grpc"
 	"github.com/tradeline-tech/workflow/pkg/config"
 	"github.com/tradeline-tech/workflow/server/tasks"
+	"github.com/tradeline-tech/workflow/types"
 )
 
-type WorkflowsType map[string]*common.Tasks
+type WorkflowsType map[string]*types.Tasks
 
 // srvTaskRunners is the list of declared constructor tasks
 // to run for the workflow tasks mapping one runner to one task
 // they run in the sequence listed here
-var srvTaskRunners = []common.TaskRunnerNewFunc{
+var srvTaskRunners = []types.TaskRunnerNewFunc{
 	tasks.NewGetWorkflowName,
 }
 
@@ -41,7 +41,7 @@ type WorkflowsServer struct {
 
 	// Cached org workflows, config
 	workflows   WorkflowsType
-	TaskRunners []common.TaskRunnerNewFunc
+	TaskRunners []types.TaskRunnerNewFunc
 }
 
 var (
@@ -74,7 +74,7 @@ func (srv *WorkflowsServer) GetgRPCServer() grpc.TaskCommunicator_RunWorkflowSer
 // init fabric database config
 // runs workflow tasks for the org whose token the Cli sends in the gRPC stream
 func (srv *WorkflowsServer) RunTasks(stream grpc.TaskCommunicator_RunWorkflowServer) error {
-	var workflowReq = &common.Tasks{}
+	var workflowReq = &types.Tasks{}
 
 	defer recoverFromPanic()
 
@@ -146,7 +146,7 @@ func stepCheckIOError(ctx context.Context, remoteMsg *grpc.RemoteMsg, err error)
 
 // 2. Is a remote connection working on tasks?
 func stepProcessReceivedMessages(ctx context.Context, remoteMsg *grpc.RemoteMsg,
-	workflow *common.Tasks) (nextAction int) {
+	workflow *types.Tasks) (nextAction int) {
 	if remoteMsg.TaskInProgress != "" {
 		if remoteMsg.ErrorMsg != "" {
 			logger.Error(ctx, errors.New(remoteMsg.ErrorMsg),
@@ -179,7 +179,7 @@ func stepProcessReceivedMessages(ctx context.Context, remoteMsg *grpc.RemoteMsg,
 func stepWorkflowCompletedRemotely(
 	ctx context.Context,
 	remoteMsg *grpc.RemoteMsg,
-	workflow *common.Tasks,
+	workflow *types.Tasks,
 	stream grpc.TaskCommunicator_RunWorkflowServer) (exit bool) {
 	if !remoteMsg.TasksCompleted {
 		return false
@@ -206,7 +206,7 @@ func stepWorkflowCompletedRemotely(
 
 // 4. Resume server workflow tasks
 func stepRunServerSideTasks(ctx context.Context,
-	serverOrgWorkflow *common.Tasks,
+	serverOrgWorkflow *types.Tasks,
 	stream grpc.TaskCommunicator_RunWorkflowServer, remoteMsg *grpc.RemoteMsg) error {
 	errIn := serverOrgWorkflow.Run(ctx)
 
@@ -221,7 +221,7 @@ func stepRunServerSideTasks(ctx context.Context,
 
 // 5. Are pending remote tasks for execution?
 func stepSendRemoteTasks(ctx context.Context,
-	serverWorkflow *common.Tasks,
+	serverWorkflow *types.Tasks,
 	gRPCSrv grpc.TaskCommunicator_RunWorkflowServer) (nextAction int) {
 	err := grpc.SendRemoteTasksToDo(gRPCSrv, serverWorkflow.GetPendingRemoteTaskNames())
 	if err != nil {
@@ -235,7 +235,7 @@ func stepSendRemoteTasks(ctx context.Context,
 
 // 6. Has the workflow completed?
 func stepWorkflowCompleted(ctx context.Context,
-	serverWorkflow *common.Tasks, gRPCSrv grpc.TaskCommunicator_RunWorkflowServer) (exit bool) {
+	serverWorkflow *types.Tasks, gRPCSrv grpc.TaskCommunicator_RunWorkflowServer) (exit bool) {
 	if serverWorkflow.SetWorkflowCompletedChecked(ctx) {
 		if err := grpc.SignalSrvWorkflowCompletion(gRPCSrv, serverWorkflow.GetLen()); err != nil {
 			fmt.Println(err, "sending workflow completion messaging error")
@@ -247,7 +247,7 @@ func stepWorkflowCompleted(ctx context.Context,
 	return false
 }
 
-func safeSaveWorkflow(srvWorkflow *common.Tasks) {
+func safeSaveWorkflow(srvWorkflow *types.Tasks) {
 	ctx := context.Background()
 
 	if srvWorkflow != nil {
@@ -256,7 +256,7 @@ func safeSaveWorkflow(srvWorkflow *common.Tasks) {
 	}
 }
 
-func (srv *WorkflowsServer) getMemCachedWorkflow(workflowNameKey string) *common.Tasks {
+func (srv *WorkflowsServer) getMemCachedWorkflow(workflowNameKey string) *types.Tasks {
 	if workflowNameKey == "" {
 		return nil
 	}
@@ -269,7 +269,7 @@ func (srv *WorkflowsServer) getMemCachedWorkflow(workflowNameKey string) *common
 	return retWorkflow
 }
 
-func (srv *WorkflowsServer) setMemCachedWorkflow(workflowNameKey string, workflow *common.Tasks) {
+func (srv *WorkflowsServer) setMemCachedWorkflow(workflowNameKey string, workflow *types.Tasks) {
 	if workflowNameKey == "" {
 		return
 	}
@@ -285,7 +285,7 @@ func (srv *WorkflowsServer) setMemCachedWorkflow(workflowNameKey string, workflo
 // from the database
 // and the two previous attempts are fruitless, initialize a new workflow
 func (srv *WorkflowsServer) initWorkflow(ctx context.Context,
-	workflowNameKey string) *common.Tasks {
+	workflowNameKey string) *types.Tasks {
 	var err error
 	// 1st Attempt to find workflow
 	foundWorkflow := srv.getMemCachedWorkflow(workflowNameKey)
@@ -321,7 +321,7 @@ func (srv *WorkflowsServer) initWorkflow(ctx context.Context,
 	}
 
 	// Initializing a workflow without any prior task execution
-	foundWorkflow, err = common.NewWorkflow(cfg, workflowNameKey, srv.TaskRunners)
+	foundWorkflow, err = types.NewWorkflow(cfg, workflowNameKey, srv.TaskRunners)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -332,7 +332,7 @@ func (srv *WorkflowsServer) initWorkflow(ctx context.Context,
 	return foundWorkflow
 }
 
-func readWorkflowFromDB(ctx context.Context, workflowNameKey string) (*common.Tasks, error) {
+func readWorkflowFromDB(ctx context.Context, workflowNameKey string) (*types.Tasks, error) {
 	readDocument, err := datastore.LoadByName(ctx, workflowNameKey)
 	if err != nil {
 		// TODO log error
@@ -340,7 +340,7 @@ func readWorkflowFromDB(ctx context.Context, workflowNameKey string) (*common.Ta
 	}
 
 	// type assert that the read document is a tasks type collection
-	foundWorkflow, okWorkflow := readDocument.(*common.Tasks)
+	foundWorkflow, okWorkflow := readDocument.(*types.Tasks)
 	if !okWorkflow {
 		return nil, errors.New("failed to convert read document to a workflow")
 	}

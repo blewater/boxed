@@ -1,4 +1,4 @@
-package common
+package types
 
 import (
 	"context"
@@ -17,23 +17,22 @@ import (
 
 // Tasks is the model for the network workflow collection of tasks.
 type Tasks struct {
-	// Unique managed automatically initially by mongo driver
-	ID primitive.ObjectID `bson:"_id" json:"_id"`
-	// Unique user provided workflow Id, and employed as key within server workflows map.
-	Name string `bson:"name" json:"tasks"`
-	// Task names persisted in mongo
-	Tasks       []*TaskType              `bson:"tasks" json:"tasks"`
-	TasksConfig config.TaskConfiguration `bson:"tasksConfig" json:"tasksConfig"`
-	// task runtime biz logic implementers: Do, Validate, Rollback
-	LastTaskIndexCompleted int       `bson:"lastTaskIndexCompleted" json:"lastTaskIndexCompleted"`
-	LastTaskNameCompleted  string    `bson:"lastTaskNameCompleted" json:"lastTaskNameCompleted"`
-	Completed              bool      `bson:"completed" json:"completed"`
-	CompletedAt            time.Time `bson:"completedAt" json:"completedAt"`
-	CreatedAt              time.Time `bson:"createdAt" json:"createdAt"`
-	UpdatedAt              time.Time `bson:"updatedAt" json:"updatedAt"`
+
+	// Persisted in mongo
+	ID                     primitive.ObjectID       `bson:"_id" json:"_id"`     // Unique managed automatically by mongo driver
+	Name                   string                   `bson:"name" json:"tasks"`  // Unique user provided workflow Id, and employed as key within server workflows map.
+	Tasks                  []*TaskType              `bson:"tasks" json:"tasks"` // Task names persisted in mongo
+	TasksConfig            config.TaskConfiguration `bson:"tasksConfig" json:"tasksConfig"`
+	LastTaskIndexCompleted int                      `bson:"lastTaskIndexCompleted" json:"lastTaskIndexCompleted"`
+	LastTaskNameCompleted  string                   `bson:"lastTaskNameCompleted" json:"lastTaskNameCompleted"`
+	Completed              bool                     `bson:"completed" json:"completed"`
+	CompletedAt            time.Time                `bson:"completedAt" json:"completedAt"`
+	CreatedAt              time.Time                `bson:"createdAt" json:"createdAt"`
+	UpdatedAt              time.Time                `bson:"updatedAt" json:"updatedAt"`
+
 	// Memory transient interfaces
 	TaskRunners []TaskRunner                            `bson:"-" json:"-"`
-	grpcSrv     grpc.TaskCommunicator_RunWorkflowServer `bson:"-" json:"-"`
+	gRpcSrv     grpc.TaskCommunicator_RunWorkflowServer `bson:"-" json:"-"`
 }
 
 // NewWorkflow gets a new initialized workflow struct
@@ -164,7 +163,7 @@ func (workflow *Tasks) SendTaskUpdateToRemote(taskIndex int, msgText string, err
 	runner := workflow.TaskRunners[taskIndex]
 	taskName := runner.GetTask().Name
 
-	return grpc.SendServerTaskProgressToRemote(workflow.grpcSrv, taskName, msgText, errIn)
+	return grpc.SendServerTaskProgressToRemote(workflow.gRpcSrv, taskName, msgText, errIn)
 }
 
 func (workflow *Tasks) doRemainingTasks(ctx context.Context) error {
