@@ -9,6 +9,7 @@ import (
 )
 
 const (
+	gRPCKey = "grpc"
 	// nolint:gosec
 	errTextWorkflowKeyMissing = "remote workflow name key required for messaging server apps"
 	// nolint:gosec

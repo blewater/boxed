@@ -10,9 +10,9 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	"github.com/tradeline-tech/workflow/cfg"
 	"github.com/tradeline-tech/workflow/datastore"
 	"github.com/tradeline-tech/workflow/grpc"
+	"github.com/tradeline-tech/workflow/pkg/config"
 )
 
 // Tasks is the model for the network workflow collection of tasks.
@@ -22,8 +22,8 @@ type Tasks struct {
 	// Unique user provided workflow Id, and employed as key within server workflows map.
 	Name string `bson:"name" json:"tasks"`
 	// Task names persisted in mongo
-	Tasks       []*TaskType           `bson:"tasks" json:"tasks"`
-	TasksConfig cfg.TaskConfiguration `bson:"tasksConfig" json:"tasksConfig"`
+	Tasks       []*TaskType              `bson:"tasks" json:"tasks"`
+	TasksConfig config.TaskConfiguration `bson:"tasksConfig" json:"tasksConfig"`
 	// task runtime biz logic implementers: Do, Validate, Rollback
 	LastTaskIndexCompleted int       `bson:"lastTaskIndexCompleted" json:"lastTaskIndexCompleted"`
 	LastTaskNameCompleted  string    `bson:"lastTaskNameCompleted" json:"lastTaskNameCompleted"`
@@ -31,12 +31,13 @@ type Tasks struct {
 	CompletedAt            time.Time `bson:"completedAt" json:"completedAt"`
 	CreatedAt              time.Time `bson:"createdAt" json:"createdAt"`
 	UpdatedAt              time.Time `bson:"updatedAt" json:"updatedAt"`
-	// Task memory resident initialized interfaces
-	TaskRunners []TaskRunner `bson:"-" json:"-"`
+	// Memory transient interfaces
+	TaskRunners []TaskRunner                            `bson:"-" json:"-"`
+	grpcSrv     grpc.TaskCommunicator_RunWorkflowServer `bson:"-" json:"-"`
 }
 
 // NewWorkflow gets a new initialized workflow struct
-func NewWorkflow(config cfg.TaskConfiguration, workflowName string,
+func NewWorkflow(cfg config.TaskConfiguration, workflowName string,
 	tasksRunners TaskRunners) (*Tasks, error) {
 	if workflowName == "" {
 		return nil, errors.New("empty workflow workflowName is not allowed")
@@ -46,7 +47,7 @@ func NewWorkflow(config cfg.TaskConfiguration, workflowName string,
 	workflowTaskRunners := make([]TaskRunner, 0, 10)
 
 	for _, taskRunner := range tasksRunners {
-		newTaskRunner := taskRunner(config)
+		newTaskRunner := taskRunner(cfg)
 		newTask := newTaskRunner.GetTask()
 
 		workflowTaskRunners = append(workflowTaskRunners, newTaskRunner)
@@ -59,7 +60,7 @@ func NewWorkflow(config cfg.TaskConfiguration, workflowName string,
 		Tasks:                  workflowTasks,
 		TaskRunners:            workflowTaskRunners,
 		LastTaskIndexCompleted: -1,
-		TasksConfig:            config,
+		TasksConfig:            cfg,
 	}, nil
 }
 
@@ -113,7 +114,7 @@ func (workflow *Tasks) GetPendingRemoteTaskNames() []string {
 }
 
 // InitTasksMemState updates an existing workflow with the task runners that can be created only in memory
-func (workflow *Tasks) InitTasksMemState(config cfg.TaskConfiguration,
+func (workflow *Tasks) InitTasksMemState(config config.TaskConfiguration,
 	tasksRunnerNewFunc []TaskRunnerNewFunc) error {
 	if len(tasksRunnerNewFunc) != len(workflow.Tasks) {
 		return fmt.Errorf(`error workflow tasks length: %d != task runners length: %d\n
@@ -163,16 +164,7 @@ func (workflow *Tasks) SendTaskUpdateToRemote(taskIndex int, msgText string, err
 	runner := workflow.TaskRunners[taskIndex]
 	taskName := runner.GetTask().Name
 
-	srv, ok := runner.GetProp(cfg.GRPCSrvKey)
-	if !ok {
-		return fmt.Errorf("gRPC Server not found within config of task:%s", taskName)
-	}
-	gRPCSrv, ok := srv.(grpc.TaskCommunicator_RunWorkflowServer)
-	if !ok {
-		return fmt.Errorf("invalid gRPC Server within task %s", taskName)
-	}
-
-	return SendServerTaskProgressToRemote(gRPCSrv, taskName, msgText, errIn)
+	return grpc.SendServerTaskProgressToRemote(workflow.grpcSrv, taskName, msgText, errIn)
 }
 
 func (workflow *Tasks) doRemainingTasks(ctx context.Context) error {
@@ -236,7 +228,7 @@ func (workflow *Tasks) SendRemoteTasksToDo(
 		return false, nil
 	}
 
-	errSend := SendRemoteTasksToDo(gRPCSrv, remoteTaskNames)
+	errSend := grpc.SendRemoteTasksToDo(gRPCSrv, remoteTaskNames)
 
 	if errSend != nil {
 		return false, errSend

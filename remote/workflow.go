@@ -7,8 +7,8 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/tradeline-tech/workflow/cfg"
 	"github.com/tradeline-tech/workflow/common"
+	"github.com/tradeline-tech/workflow/pkg/config"
 
 	"github.com/tradeline-tech/argo/pkg/logger"
 
@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	config cfg.TaskConfiguration
+	cfg config.TaskConfiguration
 )
 
 // ProcessGRPCMessages Enters the remote messaging processing loop
@@ -61,14 +61,14 @@ func ProcessGRPCMessages(ctx context.Context,
 		}
 
 		// 4. Are we done?
-		if serverMsg.TaskInProgress == common.ServerWorkflowCompletionText {
+		if serverMsg.TaskInProgress == grpc.ServerWorkflowCompletionText {
 			fmt.Println("Received workflow completion message. Exiting...")
 			break
 		}
 
 		// 7. Run any Cli-side tasks
 		remoteTasks := serverMsg.RemoteTasks
-		err = runRemoteWorkflow(ctx, remoteTaskRunners, workflowNameKey, config, remoteTasks, stream)
+		err = runRemoteWorkflow(ctx, remoteTaskRunners, workflowNameKey, cfg, remoteTasks, stream)
 		if err != nil {
 			return err
 		}
@@ -118,7 +118,7 @@ func handleMsgErr(ctx context.Context, err error, serverMsg *grpc.ServerMsg) err
 func runRemoteWorkflow(ctx context.Context,
 	remoteTaskRunners common.RemoteTaskRunnersByKey,
 	workflowNameKey string,
-	remoteConfig cfg.TaskConfiguration,
+	remoteConfig config.TaskConfiguration,
 	remoteTaskNames []string,
 	stream grpc.TaskCommunicator_RunWorkflowClient) error {
 	var remoteentTaskRunners common.TaskRunners

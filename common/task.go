@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tradeline-tech/workflow/cfg"
 	"github.com/tradeline-tech/workflow/grpc"
+	"github.com/tradeline-tech/workflow/pkg/config"
 )
 
 // TaskType represents a unit of work that needs to happen on the server or client side
@@ -35,7 +35,7 @@ type TaskRunner interface {
 }
 
 // TaskRunnerNewFunc is a workflow task runner constructor
-type TaskRunnerNewFunc = func(cfg cfg.TaskConfiguration) TaskRunner
+type TaskRunnerNewFunc = func(cfg config.TaskConfiguration) TaskRunner
 type TaskRunners = []TaskRunnerNewFunc
 
 type HandlerFuncType func() error

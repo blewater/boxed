@@ -9,10 +9,10 @@ import (
 
 	"github.com/tradeline-tech/argo/pkg/logger"
 
-	"github.com/tradeline-tech/workflow/cfg"
 	"github.com/tradeline-tech/workflow/common"
 	"github.com/tradeline-tech/workflow/datastore"
 	"github.com/tradeline-tech/workflow/grpc"
+	"github.com/tradeline-tech/workflow/pkg/config"
 	"github.com/tradeline-tech/workflow/server/tasks"
 )
 
@@ -45,7 +45,7 @@ type WorkflowsServer struct {
 }
 
 var (
-	config cfg.TaskConfiguration
+	cfg config.TaskConfiguration
 )
 
 func recoverFromPanic() {
@@ -194,7 +194,7 @@ func stepWorkflowCompletedRemotely(
 	}
 
 	if workflow.SetWorkflowCompletedChecked(ctx) {
-		if err := common.SignalSrvWorkflowCompletion(stream, workflow.GetLen()); err != nil {
+		if err := grpc.SignalSrvWorkflowCompletion(stream, workflow.GetLen()); err != nil {
 			logger.Error(ctx, err, "completion messaging error")
 		}
 
@@ -223,7 +223,7 @@ func stepRunServerSideTasks(ctx context.Context,
 func stepSendRemoteTasks(ctx context.Context,
 	serverWorkflow *common.Tasks,
 	gRPCSrv grpc.TaskCommunicator_RunWorkflowServer) (nextAction int) {
-	err := common.SendRemoteTasksToDo(gRPCSrv, serverWorkflow.GetPendingRemoteTaskNames())
+	err := grpc.SendRemoteTasksToDo(gRPCSrv, serverWorkflow.GetPendingRemoteTaskNames())
 	if err != nil {
 		fmt.Print(err, "sending remote task failed")
 
@@ -237,7 +237,7 @@ func stepSendRemoteTasks(ctx context.Context,
 func stepWorkflowCompleted(ctx context.Context,
 	serverWorkflow *common.Tasks, gRPCSrv grpc.TaskCommunicator_RunWorkflowServer) (exit bool) {
 	if serverWorkflow.SetWorkflowCompletedChecked(ctx) {
-		if err := common.SignalSrvWorkflowCompletion(gRPCSrv, serverWorkflow.GetLen()); err != nil {
+		if err := grpc.SignalSrvWorkflowCompletion(gRPCSrv, serverWorkflow.GetLen()); err != nil {
 			fmt.Println(err, "sending workflow completion messaging error")
 
 			return true
@@ -305,7 +305,7 @@ func (srv *WorkflowsServer) initWorkflow(ctx context.Context,
 		fmt.Println("DB load error :", err)
 
 		// check if there is a mismatch between declared and DB task runners (func objects)
-		memoryDbCheckError := foundWorkflow.InitTasksMemState(config, srv.TaskRunners)
+		memoryDbCheckError := foundWorkflow.InitTasksMemState(cfg, srv.TaskRunners)
 		if memoryDbCheckError != nil {
 			// workflows don't match:
 			// log it and then create a new one in the DB as we assume that the correct workflow is the one
@@ -321,7 +321,7 @@ func (srv *WorkflowsServer) initWorkflow(ctx context.Context,
 	}
 
 	// Initializing a workflow without any prior task execution
-	foundWorkflow, err = common.NewWorkflow(config, workflowNameKey, srv.TaskRunners)
+	foundWorkflow, err = common.NewWorkflow(cfg, workflowNameKey, srv.TaskRunners)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -356,7 +356,7 @@ func handleMsgErr(ctx context.Context, err error, gRPCSrv grpc.TaskCommunicator_
 	if err != nil {
 		fmt.Println(err, "Server workflow error: ", err)
 
-		errCombined := common.SendErrMsgToRemote(gRPCSrv, "Server workflow task error", err)
+		errCombined := grpc.SendErrMsgToRemote(gRPCSrv, "Server workflow task error", err)
 		if errCombined != nil {
 			return errCombined
 		}

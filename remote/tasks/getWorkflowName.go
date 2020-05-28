@@ -1,9 +1,9 @@
 package tasks
 
 import (
-	"github.com/tradeline-tech/workflow/cfg"
 	"github.com/tradeline-tech/workflow/common"
 	"github.com/tradeline-tech/workflow/grpc"
+	"github.com/tradeline-tech/workflow/pkg/config"
 )
 
 const (
@@ -13,12 +13,12 @@ const (
 // getWorkflowName is a remotely executed task
 // bootstrapping a workflow with a name
 type getWorkflowName struct {
-	Config cfg.TaskConfiguration
+	Config config.TaskConfiguration
 	Task   *common.TaskType
 }
 
 // NewGetWorkflowName returns a new task that bootstraps a new workflow with a unique name
-func NewGetWorkflowName(config cfg.TaskConfiguration) common.TaskRunner {
+func NewGetWorkflowName(config config.TaskConfiguration) common.TaskRunner {
 	taskRunner := &getWorkflowName{
 		Config: config,
 		Task: &common.TaskType{
