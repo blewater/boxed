@@ -1,15 +1,19 @@
-# Remote Workflows
+# Remote workflows
 
-Execute your streaming workflow activities partitioned to server and remote tasks for repeatable, reliable asynchronous workflow processes.
-
+Declare your workflow tasks fluently to **_run_** over gRPC asynchronous streaming goodness.
+ 
 ## Features
-* Bi-Directional tasks' configuration updates, powered by gRPC streaming.
+* Open sourced tech from orchestrated Blockchain distributed  deployments.
 
-* Monitor Your Workflow Hiccups.
+* Define your dynamic execution-driven task configuration bootstrapping.
 
-* Resume your workflow activities after disuptions.
+* Monitor Your remote task hiccups centrally.
 
-* Simple implementation that scales to your workflow needs.
+* Resume your workflow activities instantly, where you left off.
+
+* Run your distributed tasks linearly as you declare them.
+
+* Instant usage that scales to your workflow needs.
 
 ## Steps to create a workflow
 1. Declare your server and remote tasks execution order.
