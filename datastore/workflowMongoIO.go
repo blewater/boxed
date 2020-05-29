@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -38,6 +39,10 @@ func read(ctx context.Context, filter bson.M) (DBDocument, error) {
 
 // LoadByName returns the database organization workflow database
 func LoadByName(ctx context.Context, workflowNameKey string) (interface{}, error) {
+	if GetDB() == nil {
+		log.Println("Running workflow without database connection")
+		return nil, nil
+	}
 	filter := bson.M{"workflowNameKey": workflowNameKey}
 
 	dbWorkflow, err := read(ctx, filter)
