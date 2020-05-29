@@ -1,7 +1,13 @@
 package config
 
-type tasksBootstrapConfiguration struct {
+type TasksBootstrapConfig struct {
 	kv map[string]interface{}
+}
+
+func NewTasksBoostrapConfig() *TasksBootstrapConfig {
+	return &TasksBootstrapConfig{
+		kv: make(map[string]interface{}),
+	}
 }
 
 // func (cfg *tasksBootstrapConfiguration) GetRPC() grpc.TaskCommunicator_RunWorkflowClient {
@@ -14,11 +20,11 @@ type tasksBootstrapConfiguration struct {
 // 	cfg.Add(GRPCKey, gRPC)
 // }
 //
-func (cfg *tasksBootstrapConfiguration) Add(key string, value interface{}) {
+func (cfg *TasksBootstrapConfig) Add(key string, value interface{}) {
 	cfg.kv[key] = value
 }
 
-func (cfg *tasksBootstrapConfiguration) Get(key string) (interface{}, bool) {
+func (cfg *TasksBootstrapConfig) Get(key string) (interface{}, bool) {
 	val, found := cfg.kv[key]
 
 	return val, found
