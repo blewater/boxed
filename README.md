@@ -1,11 +1,9 @@
-# Remote workflows
+# _remote_ workflows
 
-Declare your workflow tasks fluently to **_run_** over gRPC asynchronous streaming goodness.
+Declare your distributed tasks fluently to **_run_** over gRPC asynchronous streaming goodness.
  
 ## Features
-* Open sourced tech from orchestrated Blockchain distributed  deployments.
-
-* Define your dynamic execution-driven task configuration bootstrapping.
+* Dynamic task configuration bootstrapping.
 
 * Monitor Your remote task hiccups centrally.
 
@@ -15,22 +13,24 @@ Declare your workflow tasks fluently to **_run_** over gRPC asynchronous streami
 
 * Instant usage that scales to your workflow needs.
 
+* _where the rubber hit the road_, tech borne-out from demanding distributed deployment conditions.
+
 ## Steps to create a workflow
-1. Declare your server and remote tasks execution order.
+1. Declare your tasks _linearly_.
 
-2. Add their shared configuration hooks.
+2. Start the gRPC server,
 
-3. Add your tasks' execution logic.
+    Optional, declare a Mongo connection.
 
-4. Optionally, add data-store state persistence.
-
-5. Run your workflow :)
+3. Start your remote client to **run** your workflow :)
 
 ## Installation
 
-go get github.com/tradeline-tech/workflow
+`go get github.com/tradeline-tech/workflow`
 
 ## Use Cases
+* Distributed Docker deployments.
+
 * Remote Batch Processing.
 
 * Remote Service Provisioning.
@@ -40,7 +40,7 @@ go get github.com/tradeline-tech/workflow
 * Any loosely-coupled server to remote activities.
 
 ## Examples
-* Guess the shared (Diffie-Hellman) secret.
+* _~~Guess~~_ Hack the shared (Diffie-Hellman) secret.
 
 * Remote Tic-tac-toe play.
 
