@@ -11,8 +11,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/tradeline-tech/workflow/datastore"
-	"github.com/tradeline-tech/workflow/grpc"
 	"github.com/tradeline-tech/workflow/pkg/config"
+	"github.com/tradeline-tech/workflow/wrpc"
 )
 
 // Tasks is the model for the network workflow collection of tasks.
@@ -32,7 +32,7 @@ type Tasks struct {
 
 	// Memory transient interfaces
 	TaskRunners []TaskRunner                            `bson:"-" json:"-"`
-	gRpcSrv     grpc.TaskCommunicator_RunWorkflowServer `bson:"-" json:"-"`
+	gRpcSrv     wrpc.TaskCommunicator_RunWorkflowServer `bson:"-" json:"-"`
 }
 
 // NewWorkflow gets a new initialized workflow struct
@@ -163,7 +163,7 @@ func (workflow *Tasks) SendTaskUpdateToRemote(taskIndex int, msgText string, err
 	runner := workflow.TaskRunners[taskIndex]
 	taskName := runner.GetTask().Name
 
-	return grpc.SendServerTaskProgressToRemote(workflow.gRpcSrv, taskName, msgText, errIn)
+	return wrpc.SendServerTaskProgressToRemote(workflow.gRpcSrv, taskName, msgText, errIn)
 }
 
 func (workflow *Tasks) doRemainingTasks(ctx context.Context) error {
@@ -205,7 +205,7 @@ func (workflow *Tasks) doRemainingTasks(ctx context.Context) error {
 
 // SendRemoteTasks sends tasks that need to be executed remotely
 func (workflow *Tasks) SendRemoteTasksToRun(
-	gRPCSrv grpc.TaskCommunicator_RunWorkflowServer) (sentRemoteTasks bool, err error) {
+	gRPCSrv wrpc.TaskCommunicator_RunWorkflowServer) (sentRemoteTasks bool, err error) {
 	if workflow.LastTaskIndexCompleted+1 >= workflow.GetLen() ||
 		workflow.Tasks[workflow.LastTaskIndexCompleted+1].IsServer {
 		return false, nil
@@ -227,7 +227,7 @@ func (workflow *Tasks) SendRemoteTasksToRun(
 		return false, nil
 	}
 
-	errSend := grpc.SendRemoteTasksToRun(gRPCSrv, remoteTaskNames)
+	errSend := wrpc.SendRemoteTasksToRun(gRPCSrv, remoteTaskNames)
 
 	if errSend != nil {
 		return false, errSend
@@ -242,7 +242,7 @@ func (workflow *Tasks) SendRemoteTasksToRun(
 // till end of remote tasks length
 // -- or
 // first unsuccessful remote task
-func (workflow *Tasks) CopyRemoteTasksProgress(remoteMsg *grpc.RemoteMsg) error {
+func (workflow *Tasks) CopyRemoteTasksProgress(remoteMsg *wrpc.RemoteMsg) error {
 	if remoteMsg.Tasks == nil || len(remoteMsg.Tasks) == 0 {
 		return errors.New("error nil cli tasks")
 	}
@@ -277,7 +277,7 @@ func (workflow *Tasks) CopyRemoteTasksProgress(remoteMsg *grpc.RemoteMsg) error 
 // Save Remote Tasks TasksConfig Results Here
 // Remote Task config answers -> workflow changes of the current tasks[LastIndexCompleted]
 // Checks if it's a Remote task and completed
-func (workflow *Tasks) saveRemoteConfigResults(remoteMsg *grpc.RemoteMsg) {
+func (workflow *Tasks) saveRemoteConfigResults(remoteMsg *wrpc.RemoteMsg) {
 	cliTask := workflow.Tasks[workflow.LastTaskIndexCompleted]
 	if cliTask.Completed && !cliTask.IsServer {
 		cliTaskRunner := workflow.TaskRunners[workflow.LastTaskIndexCompleted]

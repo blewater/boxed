@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tradeline-tech/workflow/grpc"
 	"github.com/tradeline-tech/workflow/pkg/config"
+	"github.com/tradeline-tech/workflow/wrpc"
 )
 
 // TaskType represents a unit of work that needs to happen on the server or client side
@@ -31,7 +31,7 @@ type TaskRunner interface {
 	// PostRemoteTasksCompletion performs any server workflow task work upon
 	// completing the remote task work e.g., saving remote task configuration
 	// to workflow's state
-	PostRemoteTasksCompletion(msg *grpc.RemoteMsg)
+	PostRemoteTasksCompletion(msg *wrpc.RemoteMsg)
 }
 
 // TaskRunnerNewFunc is a workflow task runner constructor
