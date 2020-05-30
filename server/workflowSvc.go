@@ -5,23 +5,27 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
+	"net"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
+
+	"google.golang.org/grpc"
 
 	"github.com/tradeline-tech/workflow/datastore"
-	"github.com/tradeline-tech/workflow/grpc"
 	"github.com/tradeline-tech/workflow/pkg/config"
-	"github.com/tradeline-tech/workflow/server/tasks"
 	"github.com/tradeline-tech/workflow/types"
+	"github.com/tradeline-tech/workflow/wrpc"
 )
 
 type WorkflowsType map[string]*types.Tasks
 
-// srvTaskRunners is the list of declared constructor tasks
+// SrvTaskRunners is the list of declared constructor tasks
 // to run for the workflow tasks mapping one runner to one task
-// they run in the sequence listed here
-var srvTaskRunners = []types.TaskRunnerNewFunc{
-	tasks.NewGetWorkflowName,
-}
+// they run in the sequence listed here.
+type SrvTaskRunners []types.TaskRunnerNewFunc
 
 // Messaging loop actions
 const (
@@ -31,8 +35,10 @@ const (
 )
 
 type WorkflowsServer struct {
-	grpc.UnimplementedTaskCommunicatorServer
-	gRPCServer grpc.TaskCommunicator_RunWorkflowServer
+	wrpc.UnimplementedTaskCommunicatorServer
+	gRPCServer wrpc.TaskCommunicator_RunWorkflowServer
+
+	srvTaskRunners SrvTaskRunners
 
 	// Serialize access to concurrent workflows config access
 	mu sync.Mutex
@@ -42,13 +48,19 @@ type WorkflowsServer struct {
 	TaskRunners []types.TaskRunnerNewFunc
 }
 
+type WorkflowServerReq struct {
+	WorkflowNameKey string
+	Workflow        *types.Tasks
+	WorkflowServer  *WorkflowsServer
+}
+
 var (
 	cfg config.TaskConfiguration
 )
 
 func recoverFromPanic() {
 	if r := recover(); r != nil {
-		// TODO .Debug(context.Background(), "recover:", r)
+		log.Println("recover: ", r)
 	}
 }
 
@@ -56,28 +68,28 @@ func recoverFromPanic() {
 // a business group of with an instance of a workflow.
 // Multiple workflows with the same declared tasks could run concurrently
 // by one Workflow server.
-func NewWorkflowsServer() *WorkflowsServer {
+func NewWorkflowsServer(srvTaskRunners SrvTaskRunners) *WorkflowsServer {
 	return &WorkflowsServer{
-		workflows: make(WorkflowsType),
+		srvTaskRunners: srvTaskRunners,
+		workflows:      make(WorkflowsType),
 		// Link the declared task runners above with the workflow server
 		TaskRunners: srvTaskRunners,
 	}
 }
 
-func (srv *WorkflowsServer) GetgRPCServer() grpc.TaskCommunicator_RunWorkflowServer {
+func (srv *WorkflowsServer) GetgRPCServer() wrpc.TaskCommunicator_RunWorkflowServer {
 	return srv.gRPCServer
 }
 
 // RunTasks opens a bidirectional stream to a remote client and
 // runs tasks with workflow name-key received from the remote gRPC client.
-func (srv *WorkflowsServer) RunTasks(stream grpc.TaskCommunicator_RunWorkflowServer) error {
-	var workflowReq = &types.Tasks{}
-
+func (srv *WorkflowsServer) RunWorkflow(stream wrpc.TaskCommunicator_RunWorkflowServer) error {
+	var wReq = WorkflowServerReq{WorkflowServer: srv}
 	defer recoverFromPanic()
 
 	ctx := stream.Context()
 
-	defer safeSaveWorkflow(workflowReq)
+	defer safeSaveWorkflow(wReq.Workflow)
 
 	// Could re-enter when execution flow resumes from remote tasks
 	for {
@@ -87,53 +99,53 @@ func (srv *WorkflowsServer) RunTasks(stream grpc.TaskCommunicator_RunWorkflowSer
 			break
 		}
 
-		if loopAction := stepProcessReceivedMessages(ctx, clientMsg, workflowReq); loopAction == breakAction {
+		if loopAction := wReq.stepProcessReceivedMessages(ctx, clientMsg); loopAction == breakAction {
 			break
 		} else if loopAction == contAction {
 			continue
 		}
 
-		if stepWorkflowCompletedRemotely(ctx, clientMsg, workflowReq, stream) {
+		if stepWorkflowCompletedRemotely(ctx, clientMsg, wReq.Workflow, stream) {
 			break
 		}
 
-		if err = stepRunServerSideTasks(ctx, workflowReq, stream, clientMsg); err != nil {
+		if err = stepRunServerSideTasks(ctx, wReq.Workflow, stream, clientMsg); err != nil {
 			break
 		}
 
-		if loopAction := stepSendRemoteTasks(ctx, workflowReq, stream); loopAction == breakAction {
+		if loopAction := stepSendRemoteTasks(ctx, wReq.Workflow, stream); loopAction == breakAction {
 			break
 		} else if loopAction == contAction {
 			continue
 		}
 
-		stepWorkflowCompleted(ctx, workflowReq, stream)
+		stepWorkflowCompleted(ctx, wReq.Workflow, stream)
 	}
 
 	return nil
 }
 
 // 1. Check whether the protocol errs
-func stepCheckIOError(ctx context.Context, remoteMsg *grpc.RemoteMsg, err error) (exit bool) {
+func stepCheckIOError(ctx context.Context, remoteMsg *wrpc.RemoteMsg, err error) (exit bool) {
 	if errClient := ctx.Err(); errClient != nil {
 
 		return true
 	}
 
 	if err == io.EOF {
-		// TODO .Info(ctx, "server EOF:", err)
+		log.Println("server EOF : ", err)
 
 		return true
 	}
 
 	if err != nil {
-		// TODO .Error(ctx, err, "Message streaming error")
+		log.Println("error : ", err, ", server receiving messaging error")
 
 		return true
 	}
 
 	if remoteMsg == nil {
-		// TODO .Info(ctx, "Received nil Client Message: Remote likely closed the connection. Closing the server connection...")
+		log.Println("error : ", err, ", received nil remote message. Remote likely closed the connection.")
 
 		return true
 	}
@@ -142,30 +154,47 @@ func stepCheckIOError(ctx context.Context, remoteMsg *grpc.RemoteMsg, err error)
 }
 
 // 2. Is a remote connection working on tasks?
-func stepProcessReceivedMessages(ctx context.Context, remoteMsg *grpc.RemoteMsg,
-	workflow *types.Tasks) (nextAction int) {
+func (r *WorkflowServerReq) stepProcessReceivedMessages(
+	ctx context.Context, remoteMsg *wrpc.RemoteMsg) (nextAction int) {
+	// Cannot continue processing this request if workflowNameKey is empty
+	if remoteMsg.WorkflowNameKey == "" {
+		return breakAction
+	}
+
+	r.WorkflowNameKey = remoteMsg.WorkflowNameKey
+	r.Workflow = r.WorkflowServer.initWorkflow(ctx, r.WorkflowNameKey)
+
 	if remoteMsg.TaskInProgress != "" {
-		if remoteMsg.ErrorMsg != "" {
-			// TODO .Error(ctx, errors.New(remoteMsg.ErrorMsg),"logger error while processing task:", remoteMsg.TaskInProgress)
+		nextAction := printRemoteTaskError(remoteMsg, r.Workflow)
+		if nextAction != noAction {
+			return nextAction
+		}
 
-			fmt.Printf("Remote task %s erred: %s\n", remoteMsg.TaskInProgress, remoteMsg.ErrorMsg)
+		remoteTaskMsg := fmt.Sprintf("Remote tasks feedback: %s\n", remoteMsg.TaskInProgress)
+		log.Printf("%s\n", remoteTaskMsg)
 
-			if err := workflow.CopyRemoteTasksProgress(remoteMsg); err != nil {
-				// TODO .Error(ctx, err, "while processing Remote messages")
+		return contAction
+	}
 
-				return breakAction
-			}
+	return noAction
+}
 
-			defer safeSaveWorkflow(workflow)
+func printRemoteTaskError(remoteMsg *wrpc.RemoteMsg, workflow *types.Tasks) int {
+	if remoteMsg.ErrorMsg != "" {
+		log.Println(errors.New(remoteMsg.ErrorMsg),
+			"logger error while processing task:", remoteMsg.TaskInProgress)
+
+		fmt.Printf("Remote task %s erred: %s\n", remoteMsg.TaskInProgress, remoteMsg.ErrorMsg)
+
+		if err := workflow.CopyRemoteTasksProgress(remoteMsg); err != nil {
+			log.Println("error : ", err, "while processing Remote messages")
 
 			return breakAction
 		}
 
-		cliTaskMsg := fmt.Sprintf("Remote tasks feedback: %s\n", remoteMsg.TaskInProgress)
-		fmt.Printf("%s\n", cliTaskMsg)
-		// TODO .Info(ctx, remoteMsg)
+		defer safeSaveWorkflow(workflow)
 
-		return contAction
+		return breakAction
 	}
 
 	return noAction
@@ -174,9 +203,9 @@ func stepProcessReceivedMessages(ctx context.Context, remoteMsg *grpc.RemoteMsg,
 // 3. Have the completed remote tasks concluded the workflow?
 func stepWorkflowCompletedRemotely(
 	ctx context.Context,
-	remoteMsg *grpc.RemoteMsg,
+	remoteMsg *wrpc.RemoteMsg,
 	workflow *types.Tasks,
-	stream grpc.TaskCommunicator_RunWorkflowServer) (exit bool) {
+	stream wrpc.TaskCommunicator_RunWorkflowServer) (exit bool) {
 	if !remoteMsg.TasksCompleted {
 		return false
 	}
@@ -190,7 +219,7 @@ func stepWorkflowCompletedRemotely(
 	}
 
 	if workflow.SetWorkflowCompletedChecked(ctx) {
-		if err := grpc.SignalSrvWorkflowCompletion(stream, workflow.GetLen()); err != nil {
+		if err := wrpc.SignalSrvWorkflowCompletion(stream, workflow.GetLen()); err != nil {
 			// TODO .Error(ctx, err, "completion messaging error")
 		}
 
@@ -203,7 +232,7 @@ func stepWorkflowCompletedRemotely(
 // 4. Resume server workflow tasks
 func stepRunServerSideTasks(ctx context.Context,
 	serverOrgWorkflow *types.Tasks,
-	stream grpc.TaskCommunicator_RunWorkflowServer, remoteMsg *grpc.RemoteMsg) error {
+	stream wrpc.TaskCommunicator_RunWorkflowServer, remoteMsg *wrpc.RemoteMsg) error {
 	errIn := serverOrgWorkflow.Run(ctx)
 
 	if err := handleMsgErr(ctx, errIn, stream, remoteMsg); err != nil {
@@ -218,8 +247,8 @@ func stepRunServerSideTasks(ctx context.Context,
 // 5. Are pending remote tasks for execution?
 func stepSendRemoteTasks(ctx context.Context,
 	serverWorkflow *types.Tasks,
-	gRPCSrv grpc.TaskCommunicator_RunWorkflowServer) (nextAction int) {
-	err := grpc.SendRemoteTasksToRun(gRPCSrv, serverWorkflow.GetPendingRemoteTaskNames())
+	gRPCSrv wrpc.TaskCommunicator_RunWorkflowServer) (nextAction int) {
+	err := wrpc.SendRemoteTasksToRun(gRPCSrv, serverWorkflow.GetPendingRemoteTaskNames())
 	if err != nil {
 		fmt.Print(err, "sending remote task failed")
 
@@ -231,9 +260,9 @@ func stepSendRemoteTasks(ctx context.Context,
 
 // 6. Has the workflow completed?
 func stepWorkflowCompleted(ctx context.Context,
-	serverWorkflow *types.Tasks, gRPCSrv grpc.TaskCommunicator_RunWorkflowServer) (exit bool) {
+	serverWorkflow *types.Tasks, gRPCSrv wrpc.TaskCommunicator_RunWorkflowServer) (exit bool) {
 	if serverWorkflow.SetWorkflowCompletedChecked(ctx) {
-		if err := grpc.SignalSrvWorkflowCompletion(gRPCSrv, serverWorkflow.GetLen()); err != nil {
+		if err := wrpc.SignalSrvWorkflowCompletion(gRPCSrv, serverWorkflow.GetLen()); err != nil {
 			fmt.Println(err, "sending workflow completion messaging error")
 
 			return true
@@ -275,11 +304,9 @@ func (srv *WorkflowsServer) setMemCachedWorkflow(workflowNameKey string, workflo
 	srv.mu.Unlock()
 }
 
-// initWorkflow initializes a pre-existing workflow looking it up by its name key
-// within the cached workflow copies
-// -- then
-// from the database
-// and the two previous attempts are fruitless, initialize a new workflow
+// initWorkflow initializes a pre-existing workflow looking it up by its name
+// key within the cached workflow copies then from the database and the two
+// previous attempts are fruitless, initialize a new workflow.
 func (srv *WorkflowsServer) initWorkflow(ctx context.Context,
 	workflowNameKey string) *types.Tasks {
 	var err error
@@ -292,21 +319,21 @@ func (srv *WorkflowsServer) initWorkflow(ctx context.Context,
 	// 2nd Attempt to load workflow from the database
 	foundWorkflow, err = readWorkflowFromDB(ctx, workflowNameKey)
 	if err != nil {
-		// TODO log err
+		log.Println("error : ", err, "while initializing workflow from the database")
 		return nil
 	}
 
 	if foundWorkflow != nil {
-		// TODO log err
-		fmt.Println("DB load error :", err)
+		log.Println("DB load error :", err)
 
 		// check if there is a mismatch between declared and DB task runners (func objects)
 		memoryDbCheckError := foundWorkflow.InitTasksMemState(cfg, srv.TaskRunners)
 		if memoryDbCheckError != nil {
 			// workflows don't match:
-			// log it and then create a new one in the DB as we assume that the correct workflow is the one
-			// declared in code
-			fmt.Println("mongo database workflow mismatch, creating new workflow from taskRunners definitions",
+			// log it and then create a new one in the DB as we assume
+			// that the correct workflow is the one declared in code.
+			fmt.Println(
+				"mongo database workflow mismatch, creating new workflow from taskRunners definitions",
 				memoryDbCheckError)
 		}
 
@@ -331,8 +358,12 @@ func (srv *WorkflowsServer) initWorkflow(ctx context.Context,
 func readWorkflowFromDB(ctx context.Context, workflowNameKey string) (*types.Tasks, error) {
 	readDocument, err := datastore.LoadByName(ctx, workflowNameKey)
 	if err != nil {
-		// TODO log error
 		return nil, err
+	}
+
+	// No workflow found or db connection not used
+	if readDocument == nil {
+		return nil, nil
 	}
 
 	// type assert that the read document is a tasks type collection
@@ -347,12 +378,12 @@ func readWorkflowFromDB(ctx context.Context, workflowNameKey string) (*types.Tas
 // server workflow error
 // combine with send error if any
 // received client workflow error
-func handleMsgErr(ctx context.Context, err error, gRPCSrv grpc.TaskCommunicator_RunWorkflowServer,
-	remoteMsg *grpc.RemoteMsg) error {
+func handleMsgErr(ctx context.Context, err error, gRPCSrv wrpc.TaskCommunicator_RunWorkflowServer,
+	remoteMsg *wrpc.RemoteMsg) error {
 	if err != nil {
 		fmt.Println(err, "Server workflow error: ", err)
 
-		errCombined := grpc.SendErrMsgToRemote(gRPCSrv, "Server workflow task error", err)
+		errCombined := wrpc.SendErrMsgToRemote(gRPCSrv, "Server workflow task error", err)
 		if errCombined != nil {
 			return errCombined
 		}
@@ -369,4 +400,56 @@ func handleMsgErr(ctx context.Context, err error, gRPCSrv grpc.TaskCommunicator_
 	}
 
 	return nil
+}
+
+func StartUp(
+	ctx context.Context,
+	srvAddress string,
+	srvPort int, serverTaskRunners SrvTaskRunners) (grpcServer *grpc.Server, port int, err error) {
+	srvAddressPort := fmt.Sprintf("%s:%d", srvAddress, srvPort)
+	tcpListener, err := net.Listen("tcp", srvAddressPort)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to listen at tcp %s", srvAddressPort)
+	}
+	log.Println("listening at ", srvAddressPort)
+	grpcServer = grpc.NewServer()
+
+	workflowServer := NewWorkflowsServer(serverTaskRunners)
+
+	wrpc.RegisterTaskCommunicatorServer(grpcServer, workflowServer)
+	log.Println(ctx, "Workflow server starting...")
+
+	if err = grpcServer.Serve(tcpListener); err != nil {
+		log.Println(err, "failed to start Workflow server")
+	}
+
+	return grpcServer, port, nil
+}
+
+// GracefulShutdown handles the server shutdown process after receiving a signal
+func GracefulShutdown(srv *grpc.Server) {
+	log.Println("Termination signal received. Shutting down everything gracefully.")
+
+	srv.GracefulStop()
+
+	if srv != nil {
+		srv.GracefulStop()
+		log.Println("server stopped")
+	}
+
+	log.Println("Shutdown process completed.")
+}
+
+// SetupSigTermCloseHandler creates a 'listener' on a new goroutine which will
+// notify the program if it receives an interrupt from the OS. We then handle
+// this by calling our clean up procedure and exiting the program.
+func SetupSigTermCloseHandler(srv *grpc.Server) {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		fmt.Println("\r- Ctrl+C pressed in Terminal")
+		GracefulShutdown(srv)
+		os.Exit(0)
+	}()
 }
