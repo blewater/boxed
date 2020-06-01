@@ -292,6 +292,14 @@ func (workflow *Tasks) SetWorkflowCompletedChecked(ctx context.Context) bool {
 		return true
 	}
 
+	// Zero tasks to do? Sounds like a unit test :)
+	if workflow.GetLen() == 0 {
+		workflow.CompletedAt = time.Now()
+		workflow.Completed = true
+
+		return true
+	}
+
 	if workflow.LastTaskIndexCompleted >= workflow.GetLen() {
 		workflow.CompletedAt = time.Now()
 		workflow.Completed = true
