@@ -7,10 +7,10 @@ import (
 	"io"
 	"log"
 	"reflect"
+	"strings"
 
 	"google.golang.org/grpc"
 
-	"github.com/tradeline-tech/workflow/client/tasks"
 	"github.com/tradeline-tech/workflow/pkg/config"
 	. "github.com/tradeline-tech/workflow/types"
 
@@ -24,6 +24,8 @@ type Remote struct {
 	workflowNameKeyValue string
 	remoteTasksMap       RemoteTaskRunnersByKey
 }
+
+type RemoteTaskRunnersByKey map[string]TaskRunnerNewFunc
 
 func New(
 	ctx context.Context,
@@ -179,6 +181,7 @@ func (r *Remote) getTaskRunnersToRun(
 			taskRunners = append(taskRunners, taskRunner)
 		}
 	}
+
 	return taskRunners, nil
 }
 
@@ -283,9 +286,9 @@ func connectToServerWithoutTLS(
 
 // StartWorkflow connects to the server and runs the declared workflow.
 func StartWorkflow(
-	ctx context.Context,
 	serverAddress string,
-	port int) error {
+	port int, remoteTaskRunners TaskRunners) error {
+	ctx := context.Background()
 
 	client, err := connectToServerWithoutTLS(ctx, serverAddress, port)
 	if err != nil {
@@ -300,12 +303,17 @@ func StartWorkflow(
 		client,
 		cfg,
 		"dh-secret",
-		RemoteTaskRunnersByKey{
-			/*
-			 * Set Remote Tasks here
-			 */
-			tasks.LaunchWorkflowKey: tasks.NewLaunchWorkflow,
-		})
+		copyTaskRunnersToMap(remoteTaskRunners))
 
 	return remote.ProcessGRPCMessages()
+}
+
+func copyTaskRunnersToMap(runners TaskRunners) RemoteTaskRunnersByKey {
+	runnersMap := make(RemoteTaskRunnersByKey)
+	for _, runner := range runners {
+		runnerType := strings.ToLower(strings.Split(fmt.Sprintf("%T", runner(nil)), ".")[1])
+		runnersMap[runnerType] = runner
+	}
+
+	return runnersMap
 }

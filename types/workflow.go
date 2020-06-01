@@ -106,7 +106,7 @@ func (workflow *Tasks) GetPendingRemoteTaskNames() []string {
 			break
 		}
 
-		remoteTaskNames = append(remoteTaskNames, task.Name)
+		remoteTaskNames = append(remoteTaskNames, strings.ToLower(task.Name))
 	}
 
 	return remoteTaskNames
