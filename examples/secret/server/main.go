@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -10,10 +9,7 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
-	localhost := "127.0.0.1"
-	srvPort := 8999
-	gRPCServer, port, err := server.StartUp(ctx, localhost, srvPort, server.SrvTaskRunners{
+	gRPCServer, port, err := server.StartUp("127.0.0.1", 8999, server.SrvTaskRunners{
 		/*
 		 * Server tasks
 		 */

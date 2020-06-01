@@ -27,11 +27,16 @@ type WorkflowsType map[string]*types.Tasks
 // they run in the sequence listed here.
 type SrvTaskRunners []types.TaskRunnerNewFunc
 
-// Messaging loop actions
+// Server Workflow Loop Step Algorithm Actions
 const (
-	noAction    = 0
+	// Non-disrupting processing action.
+	nextStepAction = 0
+	// Stop processing this request.
 	breakAction = 1
-	contAction  = 2
+	// Go back to listening for remote messages
+	// typically this is desirable after sending
+	// tasks for remote execution.
+	contAction = 2
 )
 
 type WorkflowsServer struct {
@@ -153,7 +158,9 @@ func stepCheckIOError(ctx context.Context, remoteMsg *wrpc.RemoteMsg, err error)
 	return false
 }
 
-// 2. Is a remote connection working on tasks?
+// stepProcessReceivedMessages performs step 2:
+// gets or creates a workflow for the requested key. Logs any remote task
+// progress.
 func (r *WorkflowServerReq) stepProcessReceivedMessages(
 	ctx context.Context, remoteMsg *wrpc.RemoteMsg) (nextAction int) {
 	// Cannot continue processing this request if workflowNameKey is empty
@@ -166,7 +173,7 @@ func (r *WorkflowServerReq) stepProcessReceivedMessages(
 
 	if remoteMsg.TaskInProgress != "" {
 		nextAction := printRemoteTaskError(remoteMsg, r.Workflow)
-		if nextAction != noAction {
+		if nextAction != nextStepAction {
 			return nextAction
 		}
 
@@ -176,15 +183,17 @@ func (r *WorkflowServerReq) stepProcessReceivedMessages(
 		return contAction
 	}
 
-	return noAction
+	return nextStepAction
 }
 
+// printRemoteTaskError logs remote tasks errors which result to halting any
+// further execution for this request.
 func printRemoteTaskError(remoteMsg *wrpc.RemoteMsg, workflow *types.Tasks) int {
 	if remoteMsg.ErrorMsg != "" {
 		log.Println(errors.New(remoteMsg.ErrorMsg),
 			"logger error while processing task:", remoteMsg.TaskInProgress)
 
-		fmt.Printf("Remote task %s erred: %s\n", remoteMsg.TaskInProgress, remoteMsg.ErrorMsg)
+		log.Printf("Remote task %s erred: %s\n", remoteMsg.TaskInProgress, remoteMsg.ErrorMsg)
 
 		if err := workflow.CopyRemoteTasksProgress(remoteMsg); err != nil {
 			log.Println("error : ", err, "while processing Remote messages")
@@ -197,10 +206,11 @@ func printRemoteTaskError(remoteMsg *wrpc.RemoteMsg, workflow *types.Tasks) int 
 		return breakAction
 	}
 
-	return noAction
+	return nextStepAction
 }
 
-// 3. Have the completed remote tasks concluded the workflow?
+// stepWorkflowCompletedRemotely performs step 3:
+// Have the completed remote tasks concluded the workflow?
 func stepWorkflowCompletedRemotely(
 	ctx context.Context,
 	remoteMsg *wrpc.RemoteMsg,
@@ -403,27 +413,27 @@ func handleMsgErr(ctx context.Context, err error, gRPCSrv wrpc.TaskCommunicator_
 }
 
 func StartUp(
-	ctx context.Context,
 	srvAddress string,
-	srvPort int, serverTaskRunners SrvTaskRunners) (grpcServer *grpc.Server, port int, err error) {
+	srvPort int, serverTaskRunners SrvTaskRunners) (gRpcServer *grpc.Server, port int, err error) {
+	ctx := context.Background()
 	srvAddressPort := fmt.Sprintf("%s:%d", srvAddress, srvPort)
 	tcpListener, err := net.Listen("tcp", srvAddressPort)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to listen at tcp %s", srvAddressPort)
 	}
 	log.Println("listening at ", srvAddressPort)
-	grpcServer = grpc.NewServer()
+	gRpcServer = grpc.NewServer()
 
 	workflowServer := NewWorkflowsServer(serverTaskRunners)
 
-	wrpc.RegisterTaskCommunicatorServer(grpcServer, workflowServer)
+	wrpc.RegisterTaskCommunicatorServer(gRpcServer, workflowServer)
 	log.Println(ctx, "Workflow server starting...")
 
-	if err = grpcServer.Serve(tcpListener); err != nil {
+	if err = gRpcServer.Serve(tcpListener); err != nil {
 		log.Println(err, "failed to start Workflow server")
 	}
 
-	return grpcServer, port, nil
+	return gRpcServer, port, nil
 }
 
 // GracefulShutdown handles the server shutdown process after receiving a signal
