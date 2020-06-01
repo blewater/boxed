@@ -2,5 +2,3 @@
 package types
 
 const WorkflowKey = "workflowKey"
-
-type RemoteTaskRunnersByKey map[string]TaskRunnerNewFunc

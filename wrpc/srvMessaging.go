@@ -3,6 +3,7 @@ package wrpc
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/tradeline-tech/workflow/pkg/config"
 )
@@ -91,7 +92,7 @@ func SendErrMsgToRemote(gRpcSrv TaskCommunicator_RunWorkflowServer,
 
 // SignalSrvWorkflowCompletion streams to cli that all work is done
 func SignalSrvWorkflowCompletion(gRPCSrv TaskCommunicator_RunWorkflowServer, tasksLength int) error {
-	fmt.Println("The workflow completed sending completion message to remote client...")
+	log.Println("The workflow completed sending completion message to remote client...")
 
 	errSend := gRPCSrv.Send(&ServerMsg{
 		TaskInProgress: ServerWorkflowCompletionText,

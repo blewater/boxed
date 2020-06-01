@@ -62,6 +62,6 @@ func (t *getWorkflowName) GetTask() *types.TaskType {
 // PostRemoteTasksCompletion performs any server workflow task work upon
 // completing the remote task work e.g., saving remote task configuration
 // to workflow's state
-func (t *getWorkflowName) PostRemoteTasksCompletion(msg *grpc.RemoteMsg) {
+func (t *getWorkflowName) PostRemoteTasksCompletion(msg *wrpc.RemoteMsg) {
 	t.Config.Add(ConfigWorkflowName, msg.Datum)
 }
