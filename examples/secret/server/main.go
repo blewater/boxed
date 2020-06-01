@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/tradeline-tech/workflow/server"
-	"github.com/tradeline-tech/workflow/server/tasks"
 )
 
 func main() {

@@ -1,14 +1,18 @@
 package tasks
 
 import (
-	"github.com/tradeline-tech/workflow/grpc"
+	"fmt"
+
 	"github.com/tradeline-tech/workflow/pkg/config"
 	"github.com/tradeline-tech/workflow/types"
+	"github.com/tradeline-tech/workflow/wrpc"
 )
 
 const (
 	ConfigWorkflowName = "WorkflowName"
 )
+
+var workflowValueNotFoundErr = fmt.Errorf("%s not found within configuration", types.WorkflowKey)
 
 // getWorkflowName is a remotely executed task
 // bootstrapping a workflow with a name
