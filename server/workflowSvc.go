@@ -144,8 +144,14 @@ func stepCheckIOError(ctx context.Context, remoteMsg *wrpc.RemoteMsg, err error)
 		return true
 	}
 
-	if err != nil {
-		log.Println("error : ", err, ", server receiving messaging error")
+	if errClient := ctx.Err(); errClient != nil {
+		log.Println("server reception error; Is the remote client still up?")
+
+		return true
+	}
+
+	if remoteMsg == nil {
+		log.Println("server received nil message from remote; likely closed the connection.")
 
 		return true
 	}
@@ -258,7 +264,16 @@ func stepRunServerSideTasks(ctx context.Context,
 // stepSendRemoteTasks performs step 5: Are pending remote tasks for execution?
 func stepSendRemoteTasks(serverWorkflow *types.Tasks,
 	gRPCSrv wrpc.TaskCommunicator_RunWorkflowServer) (nextAction int) {
-	err := wrpc.SendRemoteTasksToRun(gRPCSrv, serverWorkflow.GetPendingRemoteTaskNames())
+	if serverWorkflow.GetLen() == 0 {
+		return continueProcessing
+	}
+
+	remoteTasksToExecute := serverWorkflow.GetPendingRemoteTaskNames()
+	if len(remoteTasksToExecute) > 0 {
+		return continueProcessing
+	}
+
+	err := wrpc.SendRemoteTasksToRun(gRPCSrv, remoteTasksToExecute)
 	if err != nil {
 		fmt.Print(err, "sending remote task failed")
 
