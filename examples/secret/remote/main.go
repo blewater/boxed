@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/tradeline-tech/workflow/client"
-	"github.com/tradeline-tech/workflow/client/tasks"
+	"github.com/tradeline-tech/workflow/remote"
 	"github.com/tradeline-tech/workflow/types"
 )
 
