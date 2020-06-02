@@ -40,37 +40,37 @@ func NewGenGy(config config.TaskConfiguration) types.TaskRunner {
 }
 
 // Do the task
-func (t *GenGy) Do() error {
+func (task *GenGy) Do() error {
 
-	if err := t.Validate(); err != nil {
+	if err := task.Validate(); err != nil {
 		return err
 	}
-	pi, ok := t.Config.Get(P)
+	pi, ok := task.Config.Get(P)
 	if !ok {
 		return getValueNotFoundErrFunc(P)
 	}
 	p := pi.(int64)
 	fmt.Println(p)
 
-	gi, ok := t.Config.Get(G)
+	gi, ok := task.Config.Get(G)
 	if !ok {
 		return getValueNotFoundErrFunc(G)
 	}
 	g := gi.(int64)
 	fmt.Println(g)
 
-	t.Config.Add(GtoY, getModOfPow(g, rand.Int63n(p), p))
+	task.Config.Add(GtoY, getModOfPow(g, rand.Int63n(p), p))
 
 	return nil
 }
 
 // Validate if task completed
-func (t *GenGy) Validate() error {
-	_, ok := t.Config.Get(G)
+func (task *GenGy) Validate() error {
+	_, ok := task.Config.Get(G)
 	if !ok {
 		return getValueNotFoundErrFunc(G)
 	}
-	_, ok = t.Config.Get(P)
+	_, ok = task.Config.Get(P)
 	if !ok {
 		return getValueNotFoundErrFunc(P)
 	}
@@ -79,24 +79,24 @@ func (t *GenGy) Validate() error {
 }
 
 // Rollback if task failed
-func (t *GenGy) Rollback() error {
+func (task *GenGy) Rollback() error {
 	return nil
 }
 
 // GetProp returns a task config property
-func (t *GenGy) GetProp(key string) (interface{}, bool) {
-	return t.Config.Get(key)
+func (task *GenGy) GetProp(key string) (interface{}, bool) {
+	return task.Config.Get(key)
 }
 
 // GetTask returns this runner's task
-func (t *GenGy) GetTask() *types.TaskType {
-	return t.Task
+func (task *GenGy) GetTask() *types.TaskType {
+	return task.Task
 }
 
 // PostRemoteTasksCompletion performs any server workflow task work upon
 // completing the remote task work e.g., saving remote task configuration
 // to workflow's state
-func (t *GenGy) PostRemoteTasksCompletion(msg *wrpc.RemoteMsg) {
+func (task *GenGy) PostRemoteTasksCompletion(msg *wrpc.RemoteMsg) {
 }
 
 // getModOfPow encrypts or decrypts a value for the RSA algorithm using a simple
