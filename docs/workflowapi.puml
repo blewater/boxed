@@ -1,36 +1,34 @@
 @startuml
 hide footbox
 
-actor OrgAdmin
+actor RemoteUser
 boundary "Remote"
-boundary TLAdmin
-entity TLWorkflow
-collections "OrgWorkflows[]"
-database "tradeline-fabric-config"
+entity ServerWorkflow
+collections "Server Workflows[]"
+database "Workflows State in Mongo"
 
-OrgAdmin  --> TLAdmin : gRPC::SendWorkflowNameKey()
-TLAdmin -> TLWorkflow : InitWorkflow(workflowNameKey)
-TLWorkflow <- "OrgWorkflows[]" : NewWorkflow( workflowNameKey )
-    Activate TLWorkflow
-    TLWorkflow <- "tradeline-fabric-config": NewWorkflow( config )
-    TLWorkflow ->  TLWorkflow : RunMandatoryTasks()
-    TLWorkflow  --> Remote : Config <- gRPC::SendFabricConfig()
+RemoteUser  --> ServerWorkflow : gRPC::SendWorkflowNameKey()
+ServerWorkflow <- "Server Workflows[]" : NewWorkflow( workflowNameKey )
+    Activate ServerWorkflow
+    ServerWorkflow <- "Workflows State in Mongo": NewWorkflow( config )
+    ServerWorkflow ->  ServerWorkflow : RunMandatoryTasks()
+    ServerWorkflow  --> Remote : Config <- gRPC::SendConfig()
 
         Activate Remote
         Remote -> Remote : consume config
-        Remote --> TLWorkflow : gRPC:: SendTaskCompletionToServer()
-        TLWorkflow -> TLWorkflow : Run() -> Server Tasks
-        TLAdmin --> "Remote" : gRPC::SendCliTasks()
-        Remote -> Remote : runClientWorkflow()
-        Remote --> TLWorkflow : gRPC::SendCliTasksProgress()
-        TLWorkflow -> TLWorkflow : CopyCliTasksProgress()
-        TLWorkflow -> TLWorkflow : Run() -> Resume Tasks
-        TLWorkflow --> Remote : gRPC::SendWorkflowCompletion()
-        Remote --> TLAdmin !! : gRPC::SendClose()
+        Remote --> ServerWorkflow : gRPC:: SendTaskCompletionToServer()
+        ServerWorkflow -> ServerWorkflow : Run() -> Server Tasks
+        ServerWorkflow --> "Remote" : gRPC::SendRemoteTasks()
+        Remote -> Remote : runRemoteSentWorkflow()
+        Remote --> ServerWorkflow : gRPC::SendRemoteTasksProgress()
+        ServerWorkflow -> ServerWorkflow : CopyRemoteTasksProgress()
+        ServerWorkflow -> ServerWorkflow : Run() -> Resume Tasks
+        ServerWorkflow --> Remote : gRPC::SendWorkflowCompletion()
+        Remote --> ServerWorkflow !! : gRPC::SendClose()
         return
 
-    TLAdmin -> TLWorkflow : OrgWorkflow.Save()
-    TLWorkflow -> "tradeline-fabric-config" : Save()
+    ServerWorkflow -> ServerWorkflow : Workflow.Save()
+    ServerWorkflow -> "Workflows State in Mongo" : Save()
 
     return
 @enduml

@@ -13,8 +13,8 @@ package "TaskRunner" as interface {
     
 }
 
-TaskRunner ..> [Task: TL AddAffiliation] : Do(), Validate(), Rollback()
-TaskRunner ..> [Task: Send Remote Config] : Do(), Validate(), Rollback()
+TaskRunner ..> [Task: Generate Secret] : Do(), Validate(), Rollback()
+TaskRunner ..> [Task: Send Secret To Server] : Do(), Validate(), Rollback()
 TaskRunner ..> [Task: TL Save Remote Config] : Rollback
 
 @enduml
