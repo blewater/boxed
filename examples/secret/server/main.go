@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/tradeline-tech/workflow/server"
+	"github.com/tradeline-tech/workflow/server/tasks"
 )
 
 func main() {
@@ -12,7 +13,8 @@ func main() {
 		/*
 		 * Server tasks
 		 */
-		tasks.NewGetWorkflowName,
+		tasks.NewRemoteGenericTaskForSrv("genGx"),
+		NewGenGy,
 	})
 	if err != nil {
 		fmt.Printf("server launching error : %s \n", err)
