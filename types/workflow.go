@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"runtime"
 	"strings"
 	"time"
@@ -290,10 +291,12 @@ func (workflow *Tasks) CopyRemoteTasksProgress(remoteMsg *wrpc.RemoteMsg) error 
 		workflow.LastTaskNameCompleted = nextRemoteTask.TaskName
 		workflow.LastTaskIndexCompleted++
 
-		workflow.saveRemoteConfigResults(remoteMsg)
 		if nextRemoteTask.Completed {
 			log.Println("Remote task:", strings.TrimSpace(nextWorkflowTask.Name), "completed.")
 		}
+
+		// TODO is this needed anymore?
+		// workflow.saveRemoteConfigResults(remoteMsg)
 	}
 
 	return nil
@@ -325,10 +328,9 @@ func (workflow *Tasks) SetWorkflowCompletedChecked(ctx context.Context) bool {
 		return true
 	}
 
-	if workflow.LastTaskIndexCompleted >= workflow.GetLen() {
+	if workflow.LastTaskIndexCompleted+1 == workflow.GetLen() {
 		workflow.CompletedAt = time.Now()
 		workflow.Completed = true
-		workflow.LastTaskIndexCompleted = workflow.GetLen() - 1
 
 		return true
 	}
