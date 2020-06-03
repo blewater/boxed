@@ -47,7 +47,9 @@ type WorkflowsServer struct {
 	wrpc.UnimplementedTaskCommunicatorServer
 	gRPCServer wrpc.TaskCommunicator_RunWorkflowServer
 
-	srvTaskRunners SrvTaskRunners
+	// Whether to run a single workflow and exit upon error or completion
+	soloWorkflowMode bool
+	srvTaskRunners   SrvTaskRunners
 
 	// Serialize access to concurrent workflows config access
 	mu sync.Mutex
