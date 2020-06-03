@@ -39,8 +39,23 @@ func GetValue(config types.TaskConfiguration, key string) (int64, error) {
 		return 0, GetValueNotFoundErrFunc(key)
 	}
 
-	val := interfaceVal.(int64)
-	fmt.Println(val)
+	var int64Val int64
+	switch v := interfaceVal.(type) {
+	case int64:
+		int64Val = v
+	case int:
+		int64Val = int64(v)
+	case string:
+		intVal, err := strconv.Atoi(v)
+		if err != nil {
+			return 0, err
+		}
+		int64Val = int64(intVal)
+	default:
+		return 0, fmt.Errorf("%v of type %T", interfaceVal, interfaceVal)
+	}
 
-	return val, nil
+	fmt.Printf("%s : %d\n", key, int64Val)
+
+	return int64Val, nil
 }

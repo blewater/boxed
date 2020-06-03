@@ -12,20 +12,22 @@ import (
 	"github.com/tradeline-tech/workflow/wrpc"
 )
 
-// GenGy is a remotely executed task
-// bootstrapping a workflow with a name
-type GenGy struct {
+// GenGx is a remotely executed task asking user to pick p, randomly picking g
+// and calculating g^x. This is the genesis task and runs remotely
+// interactively in stdin/out.
+type GenGx struct {
 	Config types.TaskConfiguration
 	Task   *types.TaskType
 }
 
 // NewGenGx returns a new task that bootstraps a new workflow with a unique name
 func NewGenGx(config types.TaskConfiguration) types.TaskRunner {
-	taskRunner := &GenGy{
+	taskRunner := &GenGx{
 		Config: config,
 		Task: &types.TaskType{
-			Name:     types.GetTaskName(),
-			IsServer: false,
+			Name:       types.GetTaskName(),
+			IsServer:   false,
+			RunDoFirst: true,
 		},
 	}
 
@@ -33,18 +35,15 @@ func NewGenGx(config types.TaskConfiguration) types.TaskRunner {
 }
 
 // Do the task
-func (task *GenGy) Do() error {
+func (task *GenGx) Do() error {
 	var (
-		pChoice byte
+		pChoice byte = 101
 		err     error
 	)
 	rand.Seed(time.Now().UnixNano())
 	for {
-		fmt.Printf(`Choose one prime: a Or b Or c\n
-										a. 101\n
-										b. 113\n
-										c. 199\n`)
-		if _, err = fmt.Scanln(pChoice); err == nil && (pChoice == 'a' || pChoice == 'b' || pChoice == 'c') {
+		fmt.Printf("Choose  a Or b Or c:\n\t\t\ta. 101\n\t\t\tb. 113\n\t\t\tc. 199\n")
+		if _, err = fmt.Scanf("%c", &pChoice); err == nil && (pChoice == 'a' || pChoice == 'b' || pChoice == 'c') {
 			break
 		}
 	}
@@ -57,10 +56,12 @@ func (task *GenGy) Do() error {
 	case 'c':
 		p = 199
 	}
+	task.Config.Add(secret.P, p)
 	roots := getRoots(p)
 
 	// Select a random generator
 	g := roots[rand.Int63n(int64(len(roots)))]
+	task.Config.Add(secret.G, g)
 
 	x := rand.Int63n(p/2) + (p / 2)
 	task.Config.Add(secret.X, x)
@@ -80,29 +81,34 @@ func (task *GenGy) Do() error {
 }
 
 // Validate if task completed
-func (task *GenGy) Validate() error {
+func (task *GenGx) Validate() error {
+	_, ok := task.Config.Get(secret.X)
+	if !ok {
+		return secret.GetValueNotFoundErrFunc(secret.X)
+	}
+
 	return nil
 }
 
 // Rollback if task failed
-func (task *GenGy) Rollback() error {
+func (task *GenGx) Rollback() error {
 	return nil
 }
 
 // GetProp returns a task config property
-func (task *GenGy) GetProp(key string) (interface{}, bool) {
+func (task *GenGx) GetProp(key string) (interface{}, bool) {
 	return task.Config.Get(key)
 }
 
 // GetTask returns this runner's task
-func (task *GenGy) GetTask() *types.TaskType {
+func (task *GenGx) GetTask() *types.TaskType {
 	return task.Task
 }
 
 // PostRemoteTasksCompletion performs any server workflow task work upon
 // completing the remote task work e.g., saving remote task configuration
 // to workflow's state
-func (task *GenGy) PostRemoteTasksCompletion(msg *wrpc.RemoteMsg) {
+func (task *GenGx) PostRemoteTasksCompletion(msg *wrpc.RemoteMsg) {
 }
 
 // getRoots returns all the primitive roots modulo nPrime so that g is

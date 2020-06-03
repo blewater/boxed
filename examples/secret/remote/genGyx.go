@@ -8,20 +8,20 @@ import (
 	"github.com/tradeline-tech/workflow/wrpc"
 )
 
-// GenGyx is a remotely executed task
-// bootstrapping a workflow with a name
+// GenGyx is a remotely executed task and calculates g^yx the shared secret.
 type GenGyx struct {
 	Config types.TaskConfiguration
 	Task   *types.TaskType
 }
 
-// NewGenGxy returns a new task that calculates G^(y*x)
+// NewGenGxy returns a new task that calculates g^(y*x)
 func NewGenGyx(config types.TaskConfiguration) types.TaskRunner {
 	taskRunner := &GenGyx{
 		Config: config,
 		Task: &types.TaskType{
-			Name:     types.GetTaskName(),
-			IsServer: false,
+			Name:       types.GetTaskName(),
+			IsServer:   false,
+			RunDoFirst: true,
 		},
 	}
 
@@ -53,10 +53,15 @@ func (task *GenGyx) Do() error {
 	var (
 		guess, hits int64
 	)
-	i := 0
-	for ; i < 3; i++ {
-		fmt.Printf("Can you guess the exchanged secret? (trial %d)\n", i+1)
-		if _, err = fmt.Scanln(&guess); err != nil {
+	for i := 0; i < 3; i++ {
+		fmt.Printf("3 tries to guess the exchanged secret? (trial %d) : ", i+1)
+		if i == 0 {
+			_, err = fmt.Scanf("\n%d\n", &guess)
+		} else {
+			_, err = fmt.Scanf("%d\n", &guess)
+
+		}
+		if err != nil {
 			fmt.Println("error : ", err, ", input expected to be a positive integer")
 		}
 		if gYX == guess {

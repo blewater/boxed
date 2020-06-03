@@ -19,7 +19,7 @@ func main() {
 			 */
 			tasks.NewRemoteGenericTaskForSrv("genGx"),
 			NewGenGy,
-			tasks.NewRemoteGenericTaskForSrv("genGxy"),
+			tasks.NewRemoteGenericTaskForSrv("genGyx"),
 		})
 	if err != nil {
 		fmt.Printf("server launching error : %s \n", err)

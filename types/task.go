@@ -9,11 +9,13 @@ import (
 type TaskType struct {
 	CompletedAt time.Time `bson:"completedAt" json:"completedAt"`
 	// index for internal tracking
-	Name      string `bson:"name" json:"name"`
-	Log       string `bson:"log" json:"log"`
-	IsServer  bool   `bson:"isServer" json:"isServer"`
-	AlwaysRun bool   `bson:"alwaysRun" json:"alwaysRun"`
-	Completed bool   `bson:"completed" json:"completed"`
+	Name     string `bson:"name" json:"name"`
+	Log      string `bson:"log" json:"log"`
+	IsServer bool   `bson:"isServer" json:"isServer"`
+	// False: run Validate() first and only upon error, run Do(), Validate()
+	// True: run Do() first then Validate().
+	RunDoFirst bool `bson:"alwaysRun" json:"alwaysRun"`
+	Completed  bool `bson:"completed" json:"completed"`
 }
 
 type HandlerFuncType func() error
@@ -56,7 +58,7 @@ func ValidDo(runner TaskRunner) error {
 	task := runner.GetTask()
 
 	// If is a mandatory task do not validate in the beginning
-	if !task.AlwaysRun {
+	if !task.RunDoFirst {
 		if errValidation := runner.Validate(); errValidation == nil {
 			task.setCompleted()
 			fmt.Println("Validate() succeeded exiting...")

@@ -11,20 +11,20 @@ import (
 	"github.com/tradeline-tech/workflow/wrpc"
 )
 
-// GenGy is a remotely executed task
-// bootstrapping a workflow with a name
+// GenGy is a server executed task and calculates g^y.
 type GenGy struct {
 	Config types.TaskConfiguration
 	Task   *types.TaskType
 }
 
-// NewGenGy returns a new task that bootstraps a new workflow with a unique name
+// NewGenGy returns a server task that calculates g^y on the server.
 func NewGenGy(config types.TaskConfiguration) types.TaskRunner {
 	taskRunner := &GenGy{
 		Config: config,
 		Task: &types.TaskType{
-			Name:     types.GetTaskName(),
-			IsServer: true,
+			Name:       types.GetTaskName(),
+			IsServer:   true,
+			RunDoFirst: true,
 		},
 	}
 
@@ -53,13 +53,10 @@ func (task *GenGy) Do() error {
 
 	gY := secret.GetModOfPow(g, y, p)
 
-	return server.SendDataToServer(
-		secret.WorkflowNameKey,
-		[]string{
-			secret.GtoY,
-			strconv.FormatInt(gY, 10),
-		},
-		task.Config)
+	return server.SendDataToRemote([]string{
+		secret.GtoY,
+		strconv.FormatInt(gY, 10),
+	}, task.Config)
 }
 
 // Validate if task completed

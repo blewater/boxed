@@ -217,19 +217,19 @@ func SendDatumToRemote(workflowNameKey string, datum string, config types.TaskCo
 }
 
 // SendDataToRemote send a string slice of data elements to the Server.
-func SendDataToServer(workflowNameKey string, data []string, config types.TaskConfiguration) error {
+func SendDataToRemote(data []string, config types.TaskConfiguration) error {
 
 	remoteMessengerVal, found := config.Get(ConfigServerMessengerKey)
 	if !found {
 		return errors.New("messenger not found in configuration")
 	}
 
-	messenger, typeOk := remoteMessengerVal.(types.MsgToSrv)
+	messenger, typeOk := remoteMessengerVal.(types.MsgToRemote)
 	if !typeOk {
 		return errors.New("invalid messenger")
 	}
 
-	return messenger.SendDataToServer(workflowNameKey, data)
+	return messenger.SendDataToRemote(data)
 }
 
 func StartUp(
