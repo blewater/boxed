@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -86,12 +87,10 @@ func NewWorkflowsServer(soloWorkflow bool, srvTaskRunners SrvTaskRunners) *Workf
 // runs tasks with workflow name-key received from the remote gRPC client.
 func (srv *WorkflowsServer) RunWorkflow(gRPCConnToRemote wrpc.TaskCommunicator_RunWorkflowServer) error {
 	defer recoverFromPanic()
-	var req = WorkflowServerReq{WorkflowServer: srv}
-	req.setServerMessenger(gRPCConnToRemote)
 
 	ctx := gRPCConnToRemote.Context()
 
-	defer req.safeSaveWorkflow()
+	req := NewWorkflowReq(srv, gRPCConnToRemote)
 
 	for {
 		remoteMsq, err := gRPCConnToRemote.Recv()
@@ -100,25 +99,13 @@ func (srv *WorkflowsServer) RunWorkflow(gRPCConnToRemote wrpc.TaskCommunicator_R
 			break
 		}
 
-		if loopAction := req.stepProcessReceivedMessages(ctx, clientMsg); loopAction == haltRequestAction {
-			break
-		} else if loopAction == pauseServerProcessing {
+		if nextAction := req.process(ctx, gRPCConnToRemote, remoteMsq); nextAction == waitNextRequest {
 			continue
-		}
-
-		if req.stepIsWorkflowCompletedRemotely(ctx, clientMsg) {
+		} else if nextAction == exitServer {
 			break
 		}
+	}
 
-		if err = req.stepRunServerSideTasks(ctx, clientMsg); err != nil {
-			break
-		}
-
-		if loopAction := req.stepSendRemoteTasks(); loopAction == haltRequestAction {
-			break
-		} else if loopAction == pauseServerProcessing {
-			continue
-		}
 
 		req.stepWorkflowCompleted(ctx)
 	}

@@ -21,10 +21,34 @@ type WorkflowServerReq struct {
 	messenger       types.MsgToRemote
 }
 
-func (req *WorkflowServerReq) setServerMessenger(
-	gRPCSrvConnToRemote wrpc.TaskCommunicator_RunWorkflowServer) {
-	req.messenger = wrpc.NewSrvMessenger(gRPCSrvConnToRemote)
-	req.cfg.Add(ConfigServerMessengerKey, req.messenger)
+func NewWorkflowReq(srv *WorkflowsServer, gRPCConnToRemote wrpc.TaskCommunicator_RunWorkflowServer) *WorkflowServerReq {
+	return &WorkflowServerReq{
+		WorkflowServer: srv,
+		cfg:            config.NewTasksBoostrapConfig(),
+		messenger:      wrpc.NewSrvMessenger(gRPCConnToRemote),
+	}
+}
+
+func (req *WorkflowServerReq) process(
+	ctx context.Context, messenger wrpc.TaskCommunicator_RunWorkflowServer, msg *wrpc.RemoteMsg) reqAction {
+	var err error
+
+	loopAction := req.stepProcessReceivedMessages(ctx, messenger, msg)
+	if loopAction == exitServer || loopAction == waitNextRequest {
+		return loopAction
+	}
+
+	if err = req.stepRunServerSideTasks(ctx, msg); err != nil {
+		return exitServer
+	}
+
+	if loopAction := req.stepSendRemoteTasks(); loopAction == exitServer {
+		return exitServer
+	} else if loopAction == waitNextRequest {
+		return waitNextRequest
+	}
+
+	return req.stepWorkflowCompleted(ctx)
 }
 
 // initWorkflow initializes a pre-existing workflow looking it up by its name
@@ -34,13 +58,11 @@ func (req *WorkflowServerReq) initWorkflow(
 	ctx context.Context, srv *WorkflowsServer) (*types.Tasks, types.TaskConfiguration) {
 	var err error
 	// 1st Attempt to find workflow
-	foundWorkflow, cfg := srv.getMemCachedWorkflow(req.workflowNameKey)
+	foundWorkflow, foundCfg := srv.getMemCachedWorkflow(req.workflowNameKey)
 	if foundWorkflow != nil {
-		return foundWorkflow, cfg
+		return foundWorkflow, foundCfg
 	}
 
-	// Create new config for either db-fetched workflow or new workflow instance.
-	cfg = config.NewTasksBoostrapConfig()
 	// 2nd Attempt to load workflow from the database
 	foundWorkflow, err = readWorkflowFromDB(ctx, req.workflowNameKey)
 	if err != nil {
@@ -52,7 +74,7 @@ func (req *WorkflowServerReq) initWorkflow(
 		log.Println("DB load error :", err)
 
 		// check if there is a mismatch between declared and DB task runners (func objects)
-		memoryDbCheckError := foundWorkflow.InitTasksMemState(cfg, srv.TaskRunners)
+		memoryDbCheckError := foundWorkflow.InitTasksMemState(req.cfg, srv.TaskRunners)
 		if memoryDbCheckError != nil {
 			// workflows don't match:
 			// log it and then create a new one in the DB as we assume
@@ -64,20 +86,20 @@ func (req *WorkflowServerReq) initWorkflow(
 
 		// workflows db, declared task runners func match
 		if memoryDbCheckError == nil {
-			srv.setMemCachedWorkflow(req.workflowNameKey, foundWorkflow, cfg)
+			srv.setMemCachedWorkflow(req.workflowNameKey, foundWorkflow, req.cfg)
 		}
 	}
 
 	// Initializing a workflow without any prior task execution
-	foundWorkflow, err = types.NewWorkflow(cfg, req.messenger, req.workflowNameKey, srv.TaskRunners)
+	foundWorkflow, err = types.NewWorkflow(req.cfg, req.messenger, req.workflowNameKey, srv.TaskRunners)
 	if err != nil {
 		fmt.Println(err)
 	}
 
 	// Cache the created workflow
-	srv.setMemCachedWorkflow(req.workflowNameKey, foundWorkflow, cfg)
+	srv.setMemCachedWorkflow(req.workflowNameKey, foundWorkflow, req.cfg)
 
-	return foundWorkflow, cfg
+	return foundWorkflow, req.cfg
 }
 
 func (req *WorkflowServerReq) setWorkflowByName(ctx context.Context, workflowNameKey string) reqAction {
@@ -89,13 +111,15 @@ func (req *WorkflowServerReq) setWorkflowByName(ctx context.Context, workflowNam
 	req.workflowNameKey = workflowNameKey
 	req.workflow, req.cfg = req.initWorkflow(ctx, req.WorkflowServer)
 
+	req.cfg.Add(ConfigServerMessengerKey, req.messenger)
+
 	return continueProcessing
 }
 
 // stepProcessReceivedMessages performs step 2: gets or creates a workflow for
 // the requested key. Logs any remote task progress. Save any received information.
 func (req *WorkflowServerReq) stepProcessReceivedMessages(
-	ctx context.Context, remoteMsg *wrpc.RemoteMsg) reqActionType {
+	ctx context.Context, messenger wrpc.TaskCommunicator_RunWorkflowServer, remoteMsg *wrpc.RemoteMsg) reqAction {
 	req.setWorkflowByName(ctx, remoteMsg.WorkflowNameKey)
 
 	if nextAction := req.setWorkflowByName(ctx, remoteMsg.WorkflowNameKey); nextAction != continueProcessing {
@@ -106,26 +130,70 @@ func (req *WorkflowServerReq) stepProcessReceivedMessages(
 		return nextAction
 	}
 
-	req.saveRemoteData(remoteMsg)
+	gotRemoteData := req.saveRemoteData(remoteMsg)
 
+	tasksCompleted, err := req.saveRemoteTaskCompletion(ctx, remoteMsg)
+	if err != nil {
+		return exitServer
+	}
+
+	if gotRemoteData && !tasksCompleted {
+		return waitNextRequest
+	}
+
+	// Process completion or process next tasks
 	return continueProcessing
 }
 
 // saveRemoteData saves remote data to the tasks configuration for server
 // processing.
-func (req *WorkflowServerReq) saveRemoteData(remoteMsg *wrpc.RemoteMsg) {
+func (req *WorkflowServerReq) saveRemoteData(remoteMsg *wrpc.RemoteMsg) bool {
+	return req.saveRemoteDatumToCfg(remoteMsg) ||
+		req.saveRemoteDataToCfg(remoteMsg)
+}
+
+func (req *WorkflowServerReq) saveRemoteDatumToCfg(remoteMsg *wrpc.RemoteMsg) bool {
+	if remoteMsg.Datum != "" {
+		// generic key "datum" for single value communications
+		req.cfg.Add("datum", remoteMsg.Datum)
+
+		return true
+	}
+
+	return false
+}
+
+func (req *WorkflowServerReq) saveRemoteDataToCfg(remoteMsg *wrpc.RemoteMsg) bool {
 	if len(remoteMsg.Data) > 0 {
 		for i := 0; i < len(remoteMsg.Data); i += 2 {
 			key := strings.ToLower(remoteMsg.Data[i])
 			value := remoteMsg.Data[i+1]
 			req.cfg.Add(key, value)
 		}
+
+		return true
 	}
 
-	if remoteMsg.Datum != "" {
-		// generic key "datum" for single value communications
-		req.cfg.Add("datum", remoteMsg.Datum)
+	return false
+}
+
+// saveRemoteTaskCompletion checks for any remote tasks completion.
+func (req *WorkflowServerReq) saveRemoteTaskCompletion(
+	ctx context.Context, remoteMsg *wrpc.RemoteMsg) (tasksCompleted bool, err error) {
+	tasksCompleted = remoteMsg.TasksCompleted
+	if !tasksCompleted {
+		return tasksCompleted, err
 	}
+
+	defer req.safeSaveWorkflow()
+
+	if err = req.workflow.CopyRemoteTasksProgress(remoteMsg); err != nil {
+		log.Println("error : ", err, ", server workflow state is invalid")
+
+		return tasksCompleted, err
+	}
+
+	return tasksCompleted, err
 }
 
 // logRemoteTaskProgress prints any remote tasks execution errors in which case
@@ -139,40 +207,14 @@ func (req *WorkflowServerReq) logRemoteTaskProgress(remoteMsg *wrpc.RemoteMsg) r
 	if remoteMsg.TaskInProgress != "" {
 		remoteTaskMsg := fmt.Sprintf("Remote tasks feedback: %s\n", remoteMsg.TaskInProgress)
 		log.Printf("%s\n", remoteTaskMsg)
+
+		return waitNextRequest
 	}
 
 	return continueProcessing
 }
 
-// stepIsWorkflowCompletedRemotely performs step 3: Have the completed remote
-// tasks concluded the workflow?
-func (req *WorkflowServerReq) stepIsWorkflowCompletedRemotely(
-	ctx context.Context,
-	remoteMsg *wrpc.RemoteMsg) (exit bool) {
-	if !remoteMsg.TasksCompleted {
-		return false
-	}
-
-	defer req.safeSaveWorkflow()
-
-	if err := req.workflow.CopyRemoteTasksProgress(remoteMsg); err != nil {
-		log.Println("error : ", err, ", server workflow state is invalid")
-
-		return true
-	}
-
-	if req.workflow.SetWorkflowCompletedChecked(ctx) {
-		if err := req.messenger.SignalSrvWorkflowCompletion(req.workflow.GetLen()); err != nil {
-			log.Println(err, ", completion messaging error")
-		}
-
-		return true
-	}
-
-	return false
-}
-
-// stepRunServerSideTasks performs step 4: Resume server workflow tasks.
+// stepRunServerSideTasks checks whether to resume processing server workflow tasks.
 func (req *WorkflowServerReq) stepRunServerSideTasks(ctx context.Context, remoteMsg *wrpc.RemoteMsg) error {
 	errIn := req.workflow.Run(ctx)
 
@@ -185,8 +227,8 @@ func (req *WorkflowServerReq) stepRunServerSideTasks(ctx context.Context, remote
 	return nil
 }
 
-// stepSendRemoteTasks performs step 5: Are pending remote tasks for execution?
-func (req *WorkflowServerReq) stepSendRemoteTasks() reqActionType {
+// stepSendRemoteTasks checks for pending remote tasks to send for execution.
+func (req *WorkflowServerReq) stepSendRemoteTasks() reqAction {
 	if req.workflow.GetLen() == 0 {
 		return continueProcessing
 	}
@@ -215,6 +257,10 @@ func (req *WorkflowServerReq) stepWorkflowCompleted(ctx context.Context) reqActi
 			return exitServer
 		}
 
+		if req.WorkflowServer.soloWorkflowMode {
+			return exitServer
+		}
+
 		// Likely having same impact as continue processing
 		// because it's the last step in the response loop.
 		return waitNextRequest
@@ -237,7 +283,7 @@ func (req *WorkflowServerReq) handleAnyServerOrRemoteErr(lastServerTaskError err
 
 		return lastServerTaskError
 	}
-
+	// TODO is this needed?
 	clientErrMsg := remoteMsg.ErrorMsg
 	if clientErrMsg != "" {
 		clientErr := errors.New(clientErrMsg)
@@ -251,7 +297,7 @@ func (req *WorkflowServerReq) handleAnyServerOrRemoteErr(lastServerTaskError err
 
 // printRemoteTaskError logs remote tasks errors which result to halting any
 // further execution for this request.
-func (req *WorkflowServerReq) printRemoteTaskError(remoteMsg *wrpc.RemoteMsg) reqActionType {
+func (req *WorkflowServerReq) printRemoteTaskError(remoteMsg *wrpc.RemoteMsg) reqAction {
 	if remoteMsg.ErrorMsg != "" {
 		log.Println(errors.New(remoteMsg.ErrorMsg),
 			"logger error while processing task:", remoteMsg.TaskInProgress)
