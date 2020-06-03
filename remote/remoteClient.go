@@ -110,8 +110,8 @@ func recoverFromPanic() {
 	}
 }
 
-func endRemoteToSrvConnection(stream wrpc.TaskCommunicator_RunWorkflowClient) {
-	err := stream.CloseSend()
+func endRemoteToSrvConnection(remoteToSrvConn wrpc.TaskCommunicator_RunWorkflowClient) {
+	err := remoteToSrvConn.CloseSend()
 	if err != nil {
 		fmt.Println(err, "failed to close remote connection to the server")
 	}
@@ -342,7 +342,7 @@ func StartWorkflow(
 		return err
 	}
 
-	cfg := config.NewTasksBoostrapConfig()
+	var cfg types.TaskConfiguration = config.NewTasksBoostrapConfig()
 	cfg.Add(types.WorkflowKey, "dh-secret")
 
 	remote := New(
