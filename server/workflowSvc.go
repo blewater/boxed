@@ -21,6 +21,7 @@ import (
 )
 
 type WorkflowsType map[string]*types.Tasks
+type WorkflowsConfigType map[string]config.TaskConfiguration
 
 // SrvTaskRunners is the list of declared constructor tasks
 // to run for the workflow tasks mapping one runner to one task
@@ -36,7 +37,8 @@ const (
 	// Go back to listening for remote messages
 	// typically this is desirable after sending
 	// tasks for remote execution.
-	skipLoopAction = 2
+	pauseServerProcessing    = 2
+	ConfigServerMessengerKey = "serverMessenger"
 )
 
 type WorkflowsServer struct {
@@ -49,8 +51,9 @@ type WorkflowsServer struct {
 	mu sync.Mutex
 
 	// Cached org workflows, config
-	workflows   WorkflowsType
-	TaskRunners []types.TaskRunnerNewFunc
+	workflows       WorkflowsType
+	workflowsConfig WorkflowsConfigType
+	TaskRunners     []types.TaskRunnerNewFunc
 }
 
 func recoverFromPanic() {
@@ -68,49 +71,46 @@ func NewWorkflowsServer(srvTaskRunners SrvTaskRunners) *WorkflowsServer {
 		srvTaskRunners: srvTaskRunners,
 		workflows:      make(WorkflowsType),
 		// Link the declared task runners above with the workflow server
-		TaskRunners: srvTaskRunners,
+		TaskRunners:     srvTaskRunners,
+		workflowsConfig: make(WorkflowsConfigType),
 	}
-}
-
-func (srv *WorkflowsServer) GetgRPCServer() wrpc.TaskCommunicator_RunWorkflowServer {
-	return srv.gRPCServer
 }
 
 // RunTasks opens a bidirectional stream to a remote client and
 // runs tasks with workflow name-key received from the remote gRPC client.
-func (srv *WorkflowsServer) RunWorkflow(stream wrpc.TaskCommunicator_RunWorkflowServer) error {
-	var wReq = WorkflowServerReq{WorkflowServer: srv}
+func (srv *WorkflowsServer) RunWorkflow(gRPCConnToRemote wrpc.TaskCommunicator_RunWorkflowServer) error {
 	defer recoverFromPanic()
+	var req = WorkflowServerReq{WorkflowServer: srv}
+	req.setServerMessenger(gRPCConnToRemote)
 
-	ctx := stream.Context()
+	ctx := gRPCConnToRemote.Context()
 
 	defer req.safeSaveWorkflow()
 
-	// Could re-enter when execution flow resumes from remote tasks
 	for {
-		clientMsg, err := stream.Recv()
+		clientMsg, err := gRPCConnToRemote.Recv()
 
 		if stepCheckIOError(ctx, clientMsg, err) {
 			break
 		}
 
-		if loopAction := wReq.stepProcessReceivedMessages(ctx, clientMsg); loopAction == haltRequestAction {
+		if loopAction := req.stepProcessReceivedMessages(ctx, clientMsg); loopAction == haltRequestAction {
 			break
-		} else if loopAction == skipLoopAction {
+		} else if loopAction == pauseServerProcessing {
 			continue
 		}
 
-		if stepWorkflowCompletedRemotely(ctx, clientMsg, wReq.Workflow, stream) {
+		if req.stepIsWorkflowCompletedRemotely(ctx, clientMsg) {
 			break
 		}
 
-		if err = stepRunServerSideTasks(ctx, wReq.Workflow, stream, clientMsg); err != nil {
+		if err = req.stepRunServerSideTasks(ctx, clientMsg); err != nil {
 			break
 		}
 
-		if loopAction := stepSendRemoteTasks(wReq.Workflow, stream); loopAction == haltRequestAction {
+		if loopAction := req.stepSendRemoteTasks(); loopAction == haltRequestAction {
 			break
-		} else if loopAction == skipLoopAction {
+		} else if loopAction == pauseServerProcessing {
 			continue
 		}
 
@@ -150,26 +150,29 @@ func stepCheckIOError(ctx context.Context, remoteMsg *wrpc.RemoteMsg, err error)
 	return false
 }
 
-func (srv *WorkflowsServer) getMemCachedWorkflow(workflowNameKey string) *types.Tasks {
+func (srv *WorkflowsServer) getMemCachedWorkflow(workflowNameKey string) (*types.Tasks, config.TaskConfiguration) {
 	if workflowNameKey == "" {
-		return nil
+		return nil, nil
 	}
 
 	srv.mu.Lock()
 	// attempt to get cached workflow
 	retWorkflow, _ := srv.workflows[workflowNameKey]
+	retWorkflowConfig, _ := srv.workflowsConfig[workflowNameKey]
 	srv.mu.Unlock()
 
-	return retWorkflow
+	return retWorkflow, retWorkflowConfig
 }
 
-func (srv *WorkflowsServer) setMemCachedWorkflow(workflowNameKey string, workflow *types.Tasks) {
+func (srv *WorkflowsServer) setMemCachedWorkflow(
+	workflowNameKey string, workflow *types.Tasks, cfg config.TaskConfiguration) {
 	if workflowNameKey == "" {
 		return
 	}
 
 	srv.mu.Lock()
 	srv.workflows[workflowNameKey] = workflow
+	srv.workflowsConfig[workflowNameKey] = cfg
 	srv.mu.Unlock()
 }
 
@@ -192,19 +195,36 @@ func readWorkflowFromDB(ctx context.Context, workflowNameKey string) (*types.Tas
 	return foundWorkflow, nil
 }
 
+// SendDatumToRemote send a string data element to the Server.
+func SendDatumToRemote(workflowNameKey string, datum string, config config.TaskConfiguration) error {
 
-		return lastServerTaskError
+	remoteMessengerVal, found := config.Get(ConfigServerMessengerKey)
+	if !found {
+		return errors.New("messenger not found in configuration")
 	}
 
-	clientErrMsg := remoteMsg.ErrorMsg
-	if clientErrMsg != "" {
-		clientErr := errors.New(clientErrMsg)
-		fmt.Println(clientErr, "received client error")
-
-		return clientErr
+	messenger, typeOk := remoteMessengerVal.(wrpc.MsgToSrv)
+	if !typeOk {
+		return errors.New("invalid messenger")
 	}
 
-	return nil
+	return messenger.SendDatumToServer(workflowNameKey, datum)
+}
+
+// SendDataToRemote send a string slice of data elements to the Server.
+func SendDataToServer(workflowNameKey string, data []string, config config.TaskConfiguration) error {
+
+	remoteMessengerVal, found := config.Get(ConfigServerMessengerKey)
+	if !found {
+		return errors.New("messenger not found in configuration")
+	}
+
+	messenger, typeOk := remoteMessengerVal.(wrpc.MsgToSrv)
+	if !typeOk {
+		return errors.New("invalid messenger")
+	}
+
+	return messenger.SendDataToServer(workflowNameKey, data)
 }
 
 func StartUp(

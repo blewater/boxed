@@ -4,31 +4,27 @@ import (
 	"errors"
 	"fmt"
 	"log"
-
-	"github.com/tradeline-tech/workflow/pkg/config"
 )
 
 const (
-	gRPCSrvKey                   = "grpcsrv"
 	ServerWorkflowCompletionText = "workflow_completed"
 )
 
-type RPCSrvTaskConfiguration interface {
-	GetRPCSrv() TaskCommunicator_RunWorkflowServer
-	SetRPCSrv(TaskCommunicator_RunWorkflowServer)
+type SrvMessenger struct {
+	ConnToRemote TaskCommunicator_RunWorkflowServer
 }
 
-func GetRPCSrv(cfg config.TaskConfiguration) TaskCommunicator_RunWorkflowServer {
-	srv, ok := cfg.Get(gRPCSrvKey)
-	if !ok {
-		return nil
-	}
-	gRpcSrv := srv.(TaskCommunicator_RunWorkflowServer)
-	return gRpcSrv
+type MsgToRemote interface {
+	SendServerTaskProgressToRemote(taskName, msgText string, errIn error) error
+	SendRemoteTasksToRun(taskNames []string) error
+	SendErrMsgToRemote(textErrorForRemote string, preExistingError error) error
+	SignalSrvWorkflowCompletion(tasksLength int) error
+	SendDatumToRemote(datum string) error
+	SendDataToRemote(data []string) error
 }
 
-func SetRPCSrv(cfg config.TaskConfiguration, gRPCSrv TaskCommunicator_RunWorkflowServer) {
-	cfg.Add(gRPCSrvKey, gRPCSrv)
+func NewSrvMessenger(connToSrv TaskCommunicator_RunWorkflowServer) MsgToRemote {
+	return &SrvMessenger{ConnToRemote: connToSrv}
 }
 
 //
@@ -36,42 +32,40 @@ func SetRPCSrv(cfg config.TaskConfiguration, gRPCSrv TaskCommunicator_RunWorkflo
 //
 
 // SendServerTaskProgressToRemote a server task text update on progress or error to the remote client
-func SendServerTaskProgressToRemote(gRPCSrv TaskCommunicator_RunWorkflowServer,
-	taskName, msgText string, errIn error) error {
-	msg := &ServerMsg{}
+func (msg *SrvMessenger) SendServerTaskProgressToRemote(taskName, msgText string, errIn error) error {
+	serverMessage := &ServerMsg{}
 
 	if errIn != nil {
-		msg.ErrorMsg = errIn.Error()
-		return gRPCSrv.Send(msg)
+		serverMessage.ErrorMsg = errIn.Error()
+		return msg.ConnToRemote.Send(serverMessage)
 	}
 
-	msg.TaskInProgress = taskName
-	msg.TaskOutput = msgText
+	serverMessage.TaskInProgress = taskName
+	serverMessage.TaskOutput = msgText
 
-	return gRPCSrv.Send(msg)
+	return msg.ConnToRemote.Send(serverMessage)
 }
 
 // SendRemoteTasksToRun streams a message to the remote streaming connection
 // of tasks to execute
-func SendRemoteTasksToRun(gRPCSrv TaskCommunicator_RunWorkflowServer,
-	taskNames []string) error {
+func (msg *SrvMessenger) SendRemoteTasksToRun(taskNames []string) error {
 	if len(taskNames) == 0 {
 		return errors.New("no remote tasks to send")
 	}
 
-	errSend := gRPCSrv.Send(&ServerMsg{
-		RemoteTasks: taskNames,
-	})
+	if errSend := msg.ConnToRemote.Send(&ServerMsg{RemoteTasks: taskNames}); errSend != nil {
 
-	return fmt.Errorf("sending tasks to remote failed: %v", errSend)
+		return fmt.Errorf("sending tasks to remote failed: %v", errSend)
+	}
+
+	return nil
 }
 
 // SendErrMsgToRemote streams error message to the remote streaming connection
 // textErrorForRemote: is the text message we will send to the remote client
 // preExistingError to include in the response
-func SendErrMsgToRemote(gRpcSrv TaskCommunicator_RunWorkflowServer,
-	textErrorForRemote string, preExistingError error) error {
-	errSend := gRpcSrv.Send(&ServerMsg{
+func (msg *SrvMessenger) SendErrMsgToRemote(textErrorForRemote string, preExistingError error) error {
+	errSend := msg.ConnToRemote.Send(&ServerMsg{
 		ErrorMsg: textErrorForRemote,
 	})
 
@@ -91,10 +85,10 @@ func SendErrMsgToRemote(gRpcSrv TaskCommunicator_RunWorkflowServer,
 }
 
 // SignalSrvWorkflowCompletion streams to cli that all work is done
-func SignalSrvWorkflowCompletion(gRPCSrv TaskCommunicator_RunWorkflowServer, tasksLength int) error {
+func (msg *SrvMessenger) SignalSrvWorkflowCompletion(tasksLength int) error {
 	log.Println("The workflow completed sending completion message to remote client...")
 
-	errSend := gRPCSrv.Send(&ServerMsg{
+	errSend := msg.ConnToRemote.Send(&ServerMsg{
 		TaskInProgress: ServerWorkflowCompletionText,
 		TaskOutput: fmt.Sprintf("The workflow completed execution for %d tasks.\n",
 			tasksLength),
@@ -102,6 +96,34 @@ func SignalSrvWorkflowCompletion(gRPCSrv TaskCommunicator_RunWorkflowServer, tas
 
 	if errSend != nil {
 
+		return errSend
+	}
+
+	return nil
+}
+
+// SendDatumToRemote is the means for the server to send a single string data
+// element to a remote.
+func (msg *SrvMessenger) SendDatumToRemote(datum string) error {
+	errSend := msg.ConnToRemote.Send(&ServerMsg{
+		Datum: datum,
+	})
+
+	if errSend != nil {
+		return errSend
+	}
+
+	return nil
+}
+
+// SendDataToRemote is the means for the server to send a slice of string data
+// to a remote.
+func (msg *SrvMessenger) SendDataToRemote(data []string) error {
+	errSend := msg.ConnToRemote.Send(&ServerMsg{
+		Data: data,
+	})
+
+	if errSend != nil {
 		return errSend
 	}
 
