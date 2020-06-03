@@ -80,10 +80,10 @@ func (req *WorkflowServerReq) initWorkflow(
 	return foundWorkflow, cfg
 }
 
-func (req *WorkflowServerReq) setWorkflowByName(ctx context.Context, workflowNameKey string) reqActionType {
+func (req *WorkflowServerReq) setWorkflowByName(ctx context.Context, workflowNameKey string) reqAction {
 	// Unknown workflow request if workflowNameKey is empty
 	if workflowNameKey == "" {
-		return haltRequestAction
+		return exitServer
 	}
 
 	req.workflowNameKey = workflowNameKey
@@ -130,7 +130,7 @@ func (req *WorkflowServerReq) saveRemoteData(remoteMsg *wrpc.RemoteMsg) {
 
 // logRemoteTaskProgress prints any remote tasks execution errors in which case
 // it halts execution and if not it logs any tasks progress.
-func (req *WorkflowServerReq) logRemoteTaskProgress(remoteMsg *wrpc.RemoteMsg) reqActionType {
+func (req *WorkflowServerReq) logRemoteTaskProgress(remoteMsg *wrpc.RemoteMsg) reqAction {
 	if nextAction := req.printRemoteTaskError(remoteMsg); nextAction != continueProcessing {
 
 		return nextAction
@@ -200,23 +200,27 @@ func (req *WorkflowServerReq) stepSendRemoteTasks() reqActionType {
 	if err != nil {
 		fmt.Print(err, "sending remote task failed")
 
-		return haltRequestAction
+		return exitServer
 	}
 
-	return pauseServerProcessing
+	return waitNextRequest
 }
 
-// stepWorkflowCompleted performs step 6: Has the workflow completed?
-func (req *WorkflowServerReq) stepWorkflowCompleted(ctx context.Context) (exit bool) {
+// stepWorkflowCompleted checks whether the workflow has completed.
+func (req *WorkflowServerReq) stepWorkflowCompleted(ctx context.Context) reqAction {
 	if req.workflow.SetWorkflowCompletedChecked(ctx) {
 		if err := req.messenger.SignalSrvWorkflowCompletion(req.workflow.GetLen()); err != nil {
 			fmt.Println(err, "sending workflow completion messaging error")
 
-			return true
+			return exitServer
 		}
+
+		// Likely having same impact as continue processing
+		// because it's the last step in the response loop.
+		return waitNextRequest
 	}
 
-	return false
+	return continueProcessing
 }
 
 // handleAnyServerOrRemoteErr combines handling server and remote errors. The
@@ -257,12 +261,12 @@ func (req *WorkflowServerReq) printRemoteTaskError(remoteMsg *wrpc.RemoteMsg) re
 		if err := req.workflow.CopyRemoteTasksProgress(remoteMsg); err != nil {
 			log.Println("error : ", err, "while processing Remote messages")
 
-			return haltRequestAction
+			return exitServer
 		}
 
 		defer req.safeSaveWorkflow()
 
-		return haltRequestAction
+		return exitServer
 	}
 
 	return continueProcessing

@@ -2,6 +2,8 @@ package secret
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/tradeline-tech/workflow/types"
 )
@@ -30,7 +32,7 @@ func GetModOfPow(integer, exponent, n int64) int64 {
 }
 
 func GetValueNotFoundErrFunc(v string) error {
-	return fmt.Errorf("%s not found within configuration", v)
+	return fmt.Errorf("%s not found within configuration", strings.TrimSpace(v))
 }
 
 func GetValue(config types.TaskConfiguration, key string) (int64, error) {

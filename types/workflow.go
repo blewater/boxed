@@ -200,7 +200,7 @@ func (workflow *Tasks) doRemainingTasks(ctx context.Context) error {
 		}
 
 		messagingErr = workflow.SendTaskUpdateToRemote(i,
-			fmt.Sprintf("\nResuming server task %s....\n", workflow.Tasks[i].Name),
+			fmt.Sprintf("Running server task %s....", workflow.Tasks[i].Name),
 			nil)
 
 		err := ValidDo(nextTaskRunner)
@@ -282,6 +282,7 @@ func (workflow *Tasks) CopyRemoteTasksProgress(remoteMsg *wrpc.RemoteMsg) error 
 		nextWorkflowTask.Completed = remoteMsg.Tasks[remoteTaskIdx].Completed
 
 		if nextWorkflowTask.Log != "" || !nextWorkflowTask.Completed {
+			log.Println("Remote task:", nextWorkflowTask.Name, "failed :", nextWorkflowTask.Log)
 			return errors.New(nextWorkflowTask.Log)
 		}
 
@@ -290,6 +291,9 @@ func (workflow *Tasks) CopyRemoteTasksProgress(remoteMsg *wrpc.RemoteMsg) error 
 		workflow.LastTaskIndexCompleted++
 
 		workflow.saveRemoteConfigResults(remoteMsg)
+		if nextRemoteTask.Completed {
+			log.Println("Remote task:", strings.TrimSpace(nextWorkflowTask.Name), "completed.")
+		}
 	}
 
 	return nil

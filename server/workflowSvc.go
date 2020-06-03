@@ -28,17 +28,18 @@ type WorkflowsConfigType map[string]types.TaskConfiguration
 type SrvTaskRunners []types.TaskRunnerNewFunc
 
 // Server Workflow Loop Step Algorithm Actions
-type reqActionType int
+type reqAction int
 
 const (
 	// Continue processing. Non-disrupting action effect.
-	continueProcessing reqActionType = iota
-	// Stop processing this request.
-	haltRequestAction
+	continueProcessing reqAction = iota
+	// Cease processing requests and exit server.
+	exitServer
 	// Go back to listening for remote messages
 	// typically this is desirable after sending
 	// tasks for remote execution.
-	pauseServerProcessing
+	waitNextRequest
+
 	ConfigServerMessengerKey = "serverMessenger"
 )
 
@@ -93,9 +94,9 @@ func (srv *WorkflowsServer) RunWorkflow(gRPCConnToRemote wrpc.TaskCommunicator_R
 	defer req.safeSaveWorkflow()
 
 	for {
-		clientMsg, err := gRPCConnToRemote.Recv()
+		remoteMsq, err := gRPCConnToRemote.Recv()
 
-		if stepCheckIOError(ctx, clientMsg, err) {
+		if stepCheckIOError(ctx, remoteMsq, err) {
 			break
 		}
 

@@ -3,6 +3,7 @@ package wrpc
 import (
 	"errors"
 	"fmt"
+	"log"
 )
 
 //
@@ -151,7 +152,7 @@ func (msg *RemoteMessenger) SendTaskCompletionToServer(workflowNameKey string, t
 	})
 
 	if errSend != nil {
-		// TODO .Error(ctx, errSend, "failed to signal completion of the remote tasks to the server")
+		log.Println("error : ", errSend, ", failed to signal completion of the remote tasks to the server")
 
 		return errSend
 	}
