@@ -3,8 +3,6 @@ package types
 import (
 	"fmt"
 	"time"
-
-	"github.com/tradeline-tech/workflow/wrpc"
 )
 
 // TaskType represents a unit of work that needs to happen on the server or client side
@@ -17,25 +15,6 @@ type TaskType struct {
 	AlwaysRun bool   `bson:"alwaysRun" json:"alwaysRun"`
 	Completed bool   `bson:"completed" json:"completed"`
 }
-
-type TaskRunner interface {
-	Do() error
-	Validate() error
-	Rollback() error
-	// GetProp returns a task config property
-	GetProp(key string) (interface{}, bool)
-	// GetTask returns this runner's task
-	// TaskType contains the task data we save in mongo i.e. Name
-	GetTask() *TaskType
-	// PostRemoteTasksCompletion performs any server workflow task work upon
-	// completing the remote task work e.g., saving remote task configuration
-	// to workflow's state
-	PostRemoteTasksCompletion(msg *wrpc.RemoteMsg)
-}
-
-// TaskRunnerNewFunc is a workflow task runner constructor
-type TaskRunnerNewFunc = func(cfg TaskConfiguration) TaskRunner
-type TaskRunners = []TaskRunnerNewFunc
 
 type HandlerFuncType func() error
 
