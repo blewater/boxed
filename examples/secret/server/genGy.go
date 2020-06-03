@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/tradeline-tech/workflow/examples/secret"
-	"github.com/tradeline-tech/workflow/remote"
+	"github.com/tradeline-tech/workflow/server"
 	"github.com/tradeline-tech/workflow/types"
 	"github.com/tradeline-tech/workflow/wrpc"
 )
@@ -53,7 +53,7 @@ func (task *GenGy) Do() error {
 
 	gY := secret.GetModOfPow(g, y, p)
 
-	return remote.SendDataToServer(
+	return server.SendDataToServer(
 		secret.WorkflowNameKey,
 		[]string{
 			secret.GtoY,
