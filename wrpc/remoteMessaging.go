@@ -28,6 +28,7 @@ type MsgToSrv interface {
 		errTaskExec error) error
 	SendTaskStatusToServer(workflowNameKey, taskStatusMsg string) error
 	SendDatumToServer(workflowNameKey, datum string) error
+	SendDataToServer(workflowNameKey string, data []string) error
 	SendTaskCompletionToServer(workflowNameKey string, tasks []*RemoteMsg_Tasks) error
 }
 
@@ -104,7 +105,7 @@ func (msg *RemoteMessenger) SendTaskStatusToServer(workflowNameKey, taskStatusMs
 	return nil
 }
 
-// SendDatumToServer is the means for a remote to send a single string data
+// SendDatumToRemote is the means for a remote to send a single string data
 // element to the Server.
 func (msg *RemoteMessenger) SendDatumToServer(workflowNameKey, datum string) error {
 	if workflowNameKey == "" {
@@ -116,6 +117,27 @@ func (msg *RemoteMessenger) SendDatumToServer(workflowNameKey, datum string) err
 	errSend := msg.ConnToSrv.Send(&RemoteMsg{
 		WorkflowNameKey: workflowNameKey,
 		Datum:           datum,
+	})
+
+	if errSend != nil {
+		return errSend
+	}
+
+	return nil
+}
+
+// SendDataToRemote is the means for a remote to send a slick of string data
+// elements to the Server.
+func (msg *RemoteMessenger) SendDataToServer(workflowNameKey string, data []string) error {
+	if workflowNameKey == "" {
+		fmt.Println(remoteTextWorkflowNameMissing)
+
+		return errors.New(errTextWorkflowKeyMissing)
+	}
+
+	errSend := msg.ConnToSrv.Send(&RemoteMsg{
+		WorkflowNameKey: workflowNameKey,
+		Data:            data,
 	})
 
 	if errSend != nil {

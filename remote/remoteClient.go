@@ -156,7 +156,7 @@ func (r *Remote) runRemoteWorkflow(messenger wrpc.MsgToSrv, remoteTaskNames []st
 		}
 
 		if len(taskRunners) > 0 {
-			tasksToRun, err := NewWorkflow(r.cfg, r.workflowNameKeyValue, taskRunners)
+			tasksToRun, err := NewWorkflow(r.cfg, nil, r.workflowNameKeyValue, taskRunners)
 			if err != nil {
 				// TODO log error
 				return err
@@ -268,7 +268,7 @@ func (r *Remote) runReceivedTasks(messenger wrpc.MsgToSrv, remoteTasks *Tasks) e
 	return nil
 }
 
-// SendDatumToServer send a string data element to the Server.
+// SendDatumToRemote send a string data element to the Server.
 func SendDatumToServer(workflowNameKey string, datum string, config config.TaskConfiguration) error {
 
 	remoteMessengerVal, found := config.Get(ConfigRemoteMessengerKey)
@@ -282,6 +282,22 @@ func SendDatumToServer(workflowNameKey string, datum string, config config.TaskC
 	}
 
 	return messenger.SendDatumToServer(workflowNameKey, datum)
+}
+
+// SendDataToRemote send a string slice of data elements to the Server.
+func SendDataToServer(workflowNameKey string, data []string, config config.TaskConfiguration) error {
+
+	remoteMessengerVal, found := config.Get(ConfigRemoteMessengerKey)
+	if !found {
+		return errors.New("messenger not found in configuration")
+	}
+
+	messenger, typeOk := remoteMessengerVal.(wrpc.MsgToSrv)
+	if !typeOk {
+		return errors.New("invalid messenger")
+	}
+
+	return messenger.SendDataToServer(workflowNameKey, data)
 }
 
 // connectToServerWithoutTLS connects to the workflow server without public
