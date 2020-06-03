@@ -6,14 +6,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/tradeline-tech/workflow/examples/secret"
 	"github.com/tradeline-tech/workflow/pkg/config"
 	"github.com/tradeline-tech/workflow/remote"
 	"github.com/tradeline-tech/workflow/types"
 	"github.com/tradeline-tech/workflow/wrpc"
-)
-
-const (
-	GtoX = "gx"
 )
 
 // GenGy is a remotely executed task
@@ -67,11 +64,19 @@ func (task *GenGy) Do() error {
 	g := roots[rand.Int63n(int64(len(roots)))]
 
 	x := rand.Int63n(p/2) + (p / 2)
-	gX := getModOfPow(g, x, p)
+	task.Config.Add(secret.X, x)
+	gX := secret.GetModOfPow(g, x, p)
 
-	return remote.SendDatumToServer(
-		WorkflowNameKey,
-		strconv.FormatInt(gX, 10),
+	return remote.SendDataToServer(
+		secret.WorkflowNameKey,
+		[]string{
+			secret.P,
+			strconv.FormatInt(p, 10),
+			secret.G,
+			strconv.FormatInt(g, 10),
+			secret.GtoX,
+			strconv.FormatInt(gX, 10),
+		},
 		task.Config)
 }
 
@@ -101,18 +106,6 @@ func (task *GenGy) GetTask() *types.TaskType {
 func (task *GenGy) PostRemoteTasksCompletion(msg *wrpc.RemoteMsg) {
 }
 
-// getModOfPow returns the modulo of raising an integer ^ exponent
-// in a simple and moderately optimized manner using the property
-// i^e%n => ((r1=1^i mod n) * (r2=r1^i mod n)* ... * (rexp^i mod n)) mod n
-func getModOfPow(integer, exponent, n int64) int64 {
-	var res int64 = 1
-	for i := res; i <= exponent; i++ {
-		res = (res * integer) % n
-	}
-
-	return res
-}
-
 // getRoots returns all the primitive roots modulo nPrime so that g is
 // a primitive root modulo n if for every integer a co-prime to n, there is an
 // integer k such that gᵏ ≡ a. There is not a known algorithm to find
@@ -128,7 +121,7 @@ func getRoots(nPrime int64) []int64 {
 	)
 
 	for r = 2; r < nPrime; r++ {
-		kIdx := getModOfPow(r, a, nPrime)
+		kIdx := secret.GetModOfPow(r, a, nPrime)
 		for kIdx > 1 {
 			a++
 			kIdx = (kIdx * r) % nPrime

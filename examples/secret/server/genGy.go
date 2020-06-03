@@ -1,22 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"math/rand"
+	"strconv"
+	"time"
 
+	"github.com/tradeline-tech/workflow/examples/secret"
 	"github.com/tradeline-tech/workflow/pkg/config"
+	"github.com/tradeline-tech/workflow/remote"
 	"github.com/tradeline-tech/workflow/types"
 	"github.com/tradeline-tech/workflow/wrpc"
-)
-
-const (
-	G    = "g"
-	P    = "p"
-	GtoY = "gy"
-)
-
-var (
-	getValueNotFoundErrFunc = func(v string) error { return fmt.Errorf("%s not found within configuration", v) }
 )
 
 // GenGy is a remotely executed task
@@ -41,38 +34,48 @@ func NewGenGy(config config.TaskConfiguration) types.TaskRunner {
 
 // Do the task
 func (task *GenGy) Do() error {
+	rand.Seed(time.Now().UnixNano())
 
 	if err := task.Validate(); err != nil {
 		return err
 	}
-	pi, ok := task.Config.Get(P)
-	if !ok {
-		return getValueNotFoundErrFunc(P)
+	p, err := secret.GetValue(task.Config, secret.P)
+	if err != nil {
+		return err
 	}
-	p := pi.(int64)
-	fmt.Println(p)
 
-	gi, ok := task.Config.Get(G)
-	if !ok {
-		return getValueNotFoundErrFunc(G)
+	g, err := secret.GetValue(task.Config, secret.G)
+	if err != nil {
+		return err
 	}
-	g := gi.(int64)
-	fmt.Println(g)
 
-	task.Config.Add(GtoY, getModOfPow(g, rand.Int63n(p), p))
+	y := rand.Int63n(p-1) + 2
+	task.Config.Add(secret.Y, y)
 
-	return nil
+	gY := secret.GetModOfPow(g, y, p)
+
+	return remote.SendDataToServer(
+		secret.WorkflowNameKey,
+		[]string{
+			secret.GtoY,
+			strconv.FormatInt(gY, 10),
+		},
+		task.Config)
 }
 
 // Validate if task completed
 func (task *GenGy) Validate() error {
-	_, ok := task.Config.Get(G)
+	_, ok := task.Config.Get(secret.G)
 	if !ok {
-		return getValueNotFoundErrFunc(G)
+		return secret.GetValueNotFoundErrFunc(secret.G)
 	}
-	_, ok = task.Config.Get(P)
+	_, ok = task.Config.Get(secret.P)
 	if !ok {
-		return getValueNotFoundErrFunc(P)
+		return secret.GetValueNotFoundErrFunc(secret.P)
+	}
+	_, ok = task.Config.Get(secret.GtoX)
+	if !ok {
+		return secret.GetValueNotFoundErrFunc(secret.GtoX)
 	}
 
 	return nil
@@ -97,17 +100,4 @@ func (task *GenGy) GetTask() *types.TaskType {
 // completing the remote task work e.g., saving remote task configuration
 // to workflow's state
 func (task *GenGy) PostRemoteTasksCompletion(msg *wrpc.RemoteMsg) {
-}
-
-// getModOfPow encrypts or decrypts a value for the RSA algorithm using a simple
-// linear complexity Oexp modular exponentiation algorithm such that
-// i^exp mod n => ((r1=1^i mod n) * (r2=r1^i mod n)* ... * (rexp^i mod n)) mod n
-// if integer is a message m and pow is e then it returns c mod n the encrypted message per RSA
-// if integer is an encrypted message c and pow is d then it returns m mod n the decrypted message per RSA
-func getModOfPow(integer, exponent, n int64) int64 {
-	var res int64 = 1
-	for i := res; i <= exponent; i++ {
-		res = (res * integer) % n
-	}
-	return res
 }

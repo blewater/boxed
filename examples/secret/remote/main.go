@@ -8,8 +8,6 @@ import (
 	"github.com/tradeline-tech/workflow/types"
 )
 
-const WorkflowNameKey = "secret"
-
 func main() {
 	serverAddress := "127.0.0.1"
 	port := 8999
@@ -18,6 +16,7 @@ func main() {
 		 * Set Remote Tasks here
 		 */
 		NewGenGx,
+		NewGenGyx,
 	})
 	if err != nil {
 		fmt.Printf("server @ %s:%d with error : %s\n", serverAddress, port, err)

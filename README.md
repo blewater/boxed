@@ -1,6 +1,9 @@
 # _remote_ workflows
 
-Run your distributed tasks fluently to **_run_** over gRPC asynchronous streaming goodness.
+Run your distributed tasks fluently over gRPC asynchronous streaming goodness.
+
+## Why?
+Because running your asynchronous distributed activities as a cohesive linear workflow is hard.
  
 ## Use Cases
 * Distributed Docker deployments.

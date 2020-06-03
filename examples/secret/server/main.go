@@ -15,6 +15,7 @@ func main() {
 		 */
 		tasks.NewRemoteGenericTaskForSrv("genGx"),
 		NewGenGy,
+		tasks.NewRemoteGenericTaskForSrv("genGxy"),
 	})
 	if err != nil {
 		fmt.Printf("server launching error : %s \n", err)
@@ -24,6 +25,6 @@ func main() {
 	// Select ctrl-C to terminate server
 	server.SetupSigTermCloseHandler(gRPCServer)
 
-	fmt.Printf("Workflow server started @ localhost:%d\n", port)
+	fmt.Printf("workflow server started @ localhost:%d\n", port)
 	fmt.Println("Press Ctrl-C to exit server...")
 }
