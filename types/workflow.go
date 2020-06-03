@@ -31,14 +31,14 @@ type Tasks struct {
 	UpdatedAt              time.Time                `bson:"updatedAt" json:"updatedAt"`
 
 	// Memory transient interfaces
-	TaskRunners  []TaskRunner     `bson:"-" json:"-"`
-	srvMessenger wrpc.MsgToRemote `bson:"-" json:"-"`
+	TaskRunners  []TaskRunner `bson:"-" json:"-"`
+	srvMessenger MsgToRemote  `bson:"-" json:"-"`
 }
 
 // NewWorkflow gets a new initialized workflow struct
 func NewWorkflow(
 	cfg config.TaskConfiguration,
-	srvMessenger wrpc.MsgToRemote,
+	srvMessenger MsgToRemote,
 	workflowName string,
 	tasksRunners TaskRunners) (*Tasks, error) {
 	if workflowName == "" {

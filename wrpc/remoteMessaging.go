@@ -18,21 +18,7 @@ type RemoteMessenger struct {
 	ConnToSrv TaskCommunicator_RunWorkflowClient
 }
 
-type MsgToSrv interface {
-	SendWorkflowNameKeyToSrv(workflowNameKey string) error
-	SendTasksErrorMsgToServer(
-		workflowNameKey string,
-		taskIndex int,
-		currentTaskName string,
-		remoteTasks []*RemoteMsg_Tasks,
-		errTaskExec error) error
-	SendTaskStatusToServer(workflowNameKey, taskStatusMsg string) error
-	SendDatumToServer(workflowNameKey, datum string) error
-	SendDataToServer(workflowNameKey string, data []string) error
-	SendTaskCompletionToServer(workflowNameKey string, tasks []*RemoteMsg_Tasks) error
-}
-
-func NewRemoteMessenger(connToSrv TaskCommunicator_RunWorkflowClient) MsgToSrv {
+func NewRemoteMessenger(connToSrv TaskCommunicator_RunWorkflowClient) *RemoteMessenger {
 	return &RemoteMessenger{ConnToSrv: connToSrv}
 }
 

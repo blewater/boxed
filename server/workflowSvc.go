@@ -203,7 +203,7 @@ func SendDatumToRemote(workflowNameKey string, datum string, config config.TaskC
 		return errors.New("messenger not found in configuration")
 	}
 
-	messenger, typeOk := remoteMessengerVal.(wrpc.MsgToSrv)
+	messenger, typeOk := remoteMessengerVal.(types.MsgToSrv)
 	if !typeOk {
 		return errors.New("invalid messenger")
 	}
@@ -219,7 +219,7 @@ func SendDataToServer(workflowNameKey string, data []string, config config.TaskC
 		return errors.New("messenger not found in configuration")
 	}
 
-	messenger, typeOk := remoteMessengerVal.(wrpc.MsgToSrv)
+	messenger, typeOk := remoteMessengerVal.(types.MsgToSrv)
 	if !typeOk {
 		return errors.New("invalid messenger")
 	}

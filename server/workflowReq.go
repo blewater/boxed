@@ -18,7 +18,7 @@ type WorkflowServerReq struct {
 	workflow        *types.Tasks
 	WorkflowServer  *WorkflowsServer
 	cfg             config.TaskConfiguration
-	messenger       wrpc.MsgToRemote
+	messenger       types.MsgToRemote
 }
 
 func (req *WorkflowServerReq) setServerMessenger(
@@ -31,7 +31,7 @@ func (req *WorkflowServerReq) setServerMessenger(
 // key within the cached workflow copies then from the database and the two
 // previous attempts are fruitless, initialize a new workflow.
 func (req *WorkflowServerReq) initWorkflow(
-	ctx context.Context, srv *WorkflowsServer) (*types.Tasks, config.TaskConfiguration) {
+	ctx context.Context, srv *WorkflowsServer) (*types.Tasks, types.TaskConfiguration) {
 	var err error
 	// 1st Attempt to find workflow
 	foundWorkflow, cfg := srv.getMemCachedWorkflow(req.workflowNameKey)

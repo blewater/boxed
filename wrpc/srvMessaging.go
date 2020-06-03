@@ -14,16 +14,7 @@ type SrvMessenger struct {
 	ConnToRemote TaskCommunicator_RunWorkflowServer
 }
 
-type MsgToRemote interface {
-	SendServerTaskProgressToRemote(taskName, msgText string, errIn error) error
-	SendRemoteTasksToRun(taskNames []string) error
-	SendErrMsgToRemote(textErrorForRemote string, preExistingError error) error
-	SignalSrvWorkflowCompletion(tasksLength int) error
-	SendDatumToRemote(datum string) error
-	SendDataToRemote(data []string) error
-}
-
-func NewSrvMessenger(connToSrv TaskCommunicator_RunWorkflowServer) MsgToRemote {
+func NewSrvMessenger(connToSrv TaskCommunicator_RunWorkflowServer) *SrvMessenger {
 	return &SrvMessenger{ConnToRemote: connToSrv}
 }
 
