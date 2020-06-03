@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"reflect"
 	"strings"
 
@@ -48,8 +49,6 @@ func New(
 
 // ProcessGRPCMessages Enters the remote messaging processing loop
 func (r *Remote) ProcessGRPCMessages() error {
-	var messenger types.MsgToSrv
-
 	defer recoverFromPanic()
 
 	// Connect with streaming connection to the server
@@ -60,6 +59,7 @@ func (r *Remote) ProcessGRPCMessages() error {
 		return err
 	}
 
+	var messenger types.MsgToSrv
 	messenger = r.getRemoteMessenger(gRPCRemoteConnToSrv)
 	// Server would detect this at its end as an I/O error
 	defer endRemoteToSrvConnection(gRPCRemoteConnToSrv)
@@ -100,7 +100,7 @@ func (r *Remote) ProcessGRPCMessages() error {
 	return nil
 }
 
-func (r *Remote) getRemoteMessenger(gRPCRemoteConnToSrv wrpc.TaskCommunicator_RunWorkflowClient) types.MsgToSrv {
+func (r *Remote) getRemoteMessenger(gRPCRemoteConnToSrv wrpc.TaskCommunicator_RunWorkflowClient) *wrpc.RemoteMessenger {
 	messenger := wrpc.NewRemoteMessenger(gRPCRemoteConnToSrv)
 	r.cfg.Add(ConfigRemoteMessengerKey, messenger)
 	return messenger
