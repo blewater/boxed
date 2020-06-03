@@ -80,10 +80,8 @@ func (r *Remote) ProcessGRPCMessages() error {
 			return err
 		}
 
-		// 3. Print any sent server output
-		if serverMsg.TaskOutput != "" {
-			fmt.Println(serverMsg.TaskOutput)
-		}
+		// 3. Save and print any sent server output
+		r.saveServerData(serverMsg)
 
 		// 4. Are we done?
 		if serverMsg.TaskInProgress == wrpc.ServerWorkflowCompletionText {
@@ -121,16 +119,30 @@ func endRemoteToSrvConnection(stream wrpc.TaskCommunicator_RunWorkflowClient) {
 	}
 }
 
+func (r *Remote) saveServerData(serverMsg *wrpc.ServerMsg) {
+	if serverMsg.TaskOutput != "" {
+		fmt.Println(serverMsg.TaskOutput)
+	}
+	if serverMsg.Datum != "" {
+		r.cfg.Add("datum", serverMsg.Datum)
+	}
+	for i := 0; i < len(serverMsg.Data); i += 2 {
+		key := serverMsg.Data[i]
+		val := serverMsg.Data[i+1]
+		r.cfg.Add(key, val)
+	}
+}
+
 func handleSrvMsgErr(serverMsg *wrpc.ServerMsg, err error) error {
 	if err != nil {
-		// TODO logger.Error(ctx, err, " Failed to receive server messages: %v", err)
+		_, _ = fmt.Fprintln(os.Stderr, "error : ", err, ", ambiguous error message from server")
 
 		return err
 	}
 
 	if serverMsg == nil {
 		nilMsgError := errors.New("received nil server message")
-		log.Println("error : ", nilMsgError, ", received nil server message")
+		_, _ = fmt.Fprintln(os.Stderr, "error : ", nilMsgError, ", received nil server message")
 
 		return nilMsgError
 	}
@@ -138,7 +150,7 @@ func handleSrvMsgErr(serverMsg *wrpc.ServerMsg, err error) error {
 	serverErrMsg := serverMsg.ErrorMsg
 	if serverErrMsg != "" {
 		serverErr := errors.New(serverErrMsg)
-		log.Println("error : ", serverErr, ", received server error")
+		_, _ = fmt.Fprintln(os.Stderr, "error : ", serverErr, ", received server error")
 
 		return serverErr
 	}
@@ -160,11 +172,12 @@ func (r *Remote) runRemoteWorkflow(messenger types.MsgToSrv, remoteTaskNames []s
 		if len(taskRunners) > 0 {
 			tasksToRun, err := types.NewWorkflow(r.cfg, nil, r.workflowNameKeyValue, taskRunners)
 			if err != nil {
-				// TODO log error
+				log.Println("error", err, ", while creating a remote workflow")
+
 				return err
 			}
 			if err := r.runReceivedTasks(messenger, tasksToRun); err != nil {
-				// TODO .Error(ctx, err, "while running Remote tasks")
+				log.Println("error : ", err, ", while running Remote tasks")
 
 				return err
 			}
