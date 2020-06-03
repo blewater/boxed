@@ -51,8 +51,7 @@ func (r *Remote) ProcessGRPCMessages() error {
 	defer recoverFromPanic()
 
 	gRPCRemoteConnToSrv, err := r.gRPCRemote.RunWorkflow(r.ctx)
-	messenger := wrpc.NewRemoteMessenger(gRPCRemoteConnToSrv)
-	r.cfg.Add(ConfigRemoteMessengerKey, messenger)
+	messenger := r.getRemoteMessenger(gRPCRemoteConnToSrv)
 
 	// Server would detect this at its end as an I/O error
 	defer endRemoteToSrvConnection(gRPCRemoteConnToSrv)
@@ -99,6 +98,12 @@ func (r *Remote) ProcessGRPCMessages() error {
 	}
 
 	return nil
+}
+
+func (r *Remote) getRemoteMessenger(gRPCRemoteConnToSrv wrpc.TaskCommunicator_RunWorkflowClient) wrpc.MsgToSrv {
+	messenger := wrpc.NewRemoteMessenger(gRPCRemoteConnToSrv)
+	r.cfg.Add(ConfigRemoteMessengerKey, messenger)
+	return messenger
 }
 
 func recoverFromPanic() {
