@@ -80,30 +80,40 @@ func (req *WorkflowServerReq) initWorkflow(
 	return foundWorkflow, cfg
 }
 
-// stepProcessReceivedMessages performs step 2: gets or creates a workflow for
-// the requested key. Logs any remote task progress. Save any received information.
-func (req *WorkflowServerReq) stepProcessReceivedMessages(
-	ctx context.Context, remoteMsg *wrpc.RemoteMsg) (nextAction int) {
-	// Cannot continue processing this request if workflowNameKey is empty
-	if remoteMsg.WorkflowNameKey == "" {
+func (req *WorkflowServerReq) setWorkflowByName(ctx context.Context, workflowNameKey string) reqActionType {
+	// Unknown workflow request if workflowNameKey is empty
+	if workflowNameKey == "" {
 		return haltRequestAction
 	}
 
-	req.workflowNameKey = remoteMsg.WorkflowNameKey
+	req.workflowNameKey = workflowNameKey
 	req.workflow, req.cfg = req.initWorkflow(ctx, req.WorkflowServer)
 
-	if remoteMsg.TaskInProgress != "" {
-		nextAction := req.printRemoteTaskError(remoteMsg)
-		if nextAction != continueProcessing {
-			return nextAction
-		}
+	return continueProcessing
+}
 
-		remoteTaskMsg := fmt.Sprintf("Remote tasks feedback: %s\n", remoteMsg.TaskInProgress)
-		log.Printf("%s\n", remoteTaskMsg)
+// stepProcessReceivedMessages performs step 2: gets or creates a workflow for
+// the requested key. Logs any remote task progress. Save any received information.
+func (req *WorkflowServerReq) stepProcessReceivedMessages(
+	ctx context.Context, remoteMsg *wrpc.RemoteMsg) reqActionType {
+	req.setWorkflowByName(ctx, remoteMsg.WorkflowNameKey)
 
-		return pauseServerProcessing
+	if nextAction := req.setWorkflowByName(ctx, remoteMsg.WorkflowNameKey); nextAction != continueProcessing {
+		return nextAction
 	}
 
+	if nextAction := req.logRemoteTaskProgress(remoteMsg); nextAction != continueProcessing {
+		return nextAction
+	}
+
+	req.saveRemoteData(remoteMsg)
+
+	return continueProcessing
+}
+
+// saveRemoteData saves remote data to the tasks configuration for server
+// processing.
+func (req *WorkflowServerReq) saveRemoteData(remoteMsg *wrpc.RemoteMsg) {
 	if len(remoteMsg.Data) > 0 {
 		for i := 0; i < len(remoteMsg.Data); i += 2 {
 			key := strings.ToLower(remoteMsg.Data[i])
@@ -115,6 +125,20 @@ func (req *WorkflowServerReq) stepProcessReceivedMessages(
 	if remoteMsg.Datum != "" {
 		// generic key "datum" for single value communications
 		req.cfg.Add("datum", remoteMsg.Datum)
+	}
+}
+
+// logRemoteTaskProgress prints any remote tasks execution errors in which case
+// it halts execution and if not it logs any tasks progress.
+func (req *WorkflowServerReq) logRemoteTaskProgress(remoteMsg *wrpc.RemoteMsg) reqActionType {
+	if nextAction := req.printRemoteTaskError(remoteMsg); nextAction != continueProcessing {
+
+		return nextAction
+	}
+
+	if remoteMsg.TaskInProgress != "" {
+		remoteTaskMsg := fmt.Sprintf("Remote tasks feedback: %s\n", remoteMsg.TaskInProgress)
+		log.Printf("%s\n", remoteTaskMsg)
 	}
 
 	return continueProcessing
@@ -162,7 +186,7 @@ func (req *WorkflowServerReq) stepRunServerSideTasks(ctx context.Context, remote
 }
 
 // stepSendRemoteTasks performs step 5: Are pending remote tasks for execution?
-func (req *WorkflowServerReq) stepSendRemoteTasks() (nextAction int) {
+func (req *WorkflowServerReq) stepSendRemoteTasks() reqActionType {
 	if req.workflow.GetLen() == 0 {
 		return continueProcessing
 	}
@@ -223,7 +247,7 @@ func (req *WorkflowServerReq) handleAnyServerOrRemoteErr(lastServerTaskError err
 
 // printRemoteTaskError logs remote tasks errors which result to halting any
 // further execution for this request.
-func (req *WorkflowServerReq) printRemoteTaskError(remoteMsg *wrpc.RemoteMsg) int {
+func (req *WorkflowServerReq) printRemoteTaskError(remoteMsg *wrpc.RemoteMsg) reqActionType {
 	if remoteMsg.ErrorMsg != "" {
 		log.Println(errors.New(remoteMsg.ErrorMsg),
 			"logger error while processing task:", remoteMsg.TaskInProgress)
