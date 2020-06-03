@@ -52,17 +52,17 @@ func (r *Remote) ProcessGRPCMessages() error {
 
 	defer recoverFromPanic()
 
+	// Connect with streaming connection to the server
 	gRPCRemoteConnToSrv, err := r.gRPCRemote.RunWorkflow(r.ctx)
-	messenger = r.getRemoteMessenger(gRPCRemoteConnToSrv)
-
-	// Server would detect this at its end as an I/O error
-	defer endRemoteToSrvConnection(gRPCRemoteConnToSrv)
-
 	if err != nil {
-		// TODO .Error(ctx, err, "upon opening a streaming connection to the server")
+		log.Println("error : ", err, ", while calling server.RunWorkflow()")
 
 		return err
 	}
+
+	messenger = r.getRemoteMessenger(gRPCRemoteConnToSrv)
+	// Server would detect this at its end as an I/O error
+	defer endRemoteToSrvConnection(gRPCRemoteConnToSrv)
 
 	if err = messenger.SendWorkflowNameKeyToSrv(r.workflowNameKeyValue); err != nil {
 		return err
