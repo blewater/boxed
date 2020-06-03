@@ -106,11 +106,21 @@ func (srv *WorkflowsServer) RunWorkflow(gRPCConnToRemote wrpc.TaskCommunicator_R
 		}
 	}
 
+	defer req.safeSaveWorkflow()
 
-		req.stepWorkflowCompleted(ctx)
+	if srv.soloWorkflowMode {
+		terminate()
 	}
 
 	return nil
+}
+
+func terminate() {
+	log.Println("Solo workflow mode...shutting down.")
+	// yield cpu for the termination message to dispatch
+	time.Sleep(2)
+
+	os.Exit(0)
 }
 
 // 1. Check whether the protocol errs
