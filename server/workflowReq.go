@@ -17,7 +17,7 @@ type WorkflowServerReq struct {
 	workflowNameKey string
 	workflow        *types.Tasks
 	WorkflowServer  *WorkflowsServer
-	cfg             config.TaskConfiguration
+	cfg             types.TaskConfiguration
 	messenger       types.MsgToRemote
 }
 

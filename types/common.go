@@ -15,6 +15,12 @@ type MsgToRemote interface {
 	SendDatumToRemote(datum string) error
 	SendDataToRemote(data []string) error
 }
+
+type TaskConfiguration interface {
+	Add(key string, value interface{})
+	Get(key string) (interface{}, bool)
+}
+
 type MsgToSrv interface {
 	SendWorkflowNameKeyToSrv(workflowNameKey string) error
 	SendTasksErrorMsgToServer(

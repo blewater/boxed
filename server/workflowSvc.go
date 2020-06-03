@@ -15,13 +15,12 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/tradeline-tech/workflow/datastore"
-	"github.com/tradeline-tech/workflow/pkg/config"
 	"github.com/tradeline-tech/workflow/types"
 	"github.com/tradeline-tech/workflow/wrpc"
 )
 
 type WorkflowsType map[string]*types.Tasks
-type WorkflowsConfigType map[string]config.TaskConfiguration
+type WorkflowsConfigType map[string]types.TaskConfiguration
 
 // SrvTaskRunners is the list of declared constructor tasks
 // to run for the workflow tasks mapping one runner to one task
@@ -150,7 +149,7 @@ func stepCheckIOError(ctx context.Context, remoteMsg *wrpc.RemoteMsg, err error)
 	return false
 }
 
-func (srv *WorkflowsServer) getMemCachedWorkflow(workflowNameKey string) (*types.Tasks, config.TaskConfiguration) {
+func (srv *WorkflowsServer) getMemCachedWorkflow(workflowNameKey string) (*types.Tasks, types.TaskConfiguration) {
 	if workflowNameKey == "" {
 		return nil, nil
 	}
@@ -165,7 +164,7 @@ func (srv *WorkflowsServer) getMemCachedWorkflow(workflowNameKey string) (*types
 }
 
 func (srv *WorkflowsServer) setMemCachedWorkflow(
-	workflowNameKey string, workflow *types.Tasks, cfg config.TaskConfiguration) {
+	workflowNameKey string, workflow *types.Tasks, cfg types.TaskConfiguration) {
 	if workflowNameKey == "" {
 		return
 	}
@@ -196,7 +195,7 @@ func readWorkflowFromDB(ctx context.Context, workflowNameKey string) (*types.Tas
 }
 
 // SendDatumToRemote send a string data element to the Server.
-func SendDatumToRemote(workflowNameKey string, datum string, config config.TaskConfiguration) error {
+func SendDatumToRemote(workflowNameKey string, datum string, config types.TaskConfiguration) error {
 
 	remoteMessengerVal, found := config.Get(ConfigServerMessengerKey)
 	if !found {
@@ -212,7 +211,7 @@ func SendDatumToRemote(workflowNameKey string, datum string, config config.TaskC
 }
 
 // SendDataToRemote send a string slice of data elements to the Server.
-func SendDataToServer(workflowNameKey string, data []string, config config.TaskConfiguration) error {
+func SendDataToServer(workflowNameKey string, data []string, config types.TaskConfiguration) error {
 
 	remoteMessengerVal, found := config.Get(ConfigServerMessengerKey)
 	if !found {

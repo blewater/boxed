@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/tradeline-tech/workflow/examples/secret"
-	"github.com/tradeline-tech/workflow/pkg/config"
 	"github.com/tradeline-tech/workflow/types"
 	"github.com/tradeline-tech/workflow/wrpc"
 )
@@ -12,12 +11,12 @@ import (
 // GenGyx is a remotely executed task
 // bootstrapping a workflow with a name
 type GenGyx struct {
-	Config config.TaskConfiguration
+	Config types.TaskConfiguration
 	Task   *types.TaskType
 }
 
 // NewGenGxy returns a new task that calculates G^(y*x)
-func NewGenGyx(config config.TaskConfiguration) types.TaskRunner {
+func NewGenGyx(config types.TaskConfiguration) types.TaskRunner {
 	taskRunner := &GenGyx{
 		Config: config,
 		Task: &types.TaskType{

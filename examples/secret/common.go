@@ -3,7 +3,7 @@ package secret
 import (
 	"fmt"
 
-	"github.com/tradeline-tech/workflow/pkg/config"
+	"github.com/tradeline-tech/workflow/types"
 )
 
 const (
@@ -33,7 +33,7 @@ func GetValueNotFoundErrFunc(v string) error {
 	return fmt.Errorf("%s not found within configuration", v)
 }
 
-func GetValue(config config.TaskConfiguration, key string) (int64, error) {
+func GetValue(config types.TaskConfiguration, key string) (int64, error) {
 	interfaceVal, ok := config.Get(key)
 	if !ok {
 		return 0, GetValueNotFoundErrFunc(key)

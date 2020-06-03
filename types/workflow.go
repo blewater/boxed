@@ -11,7 +11,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/tradeline-tech/workflow/datastore"
-	"github.com/tradeline-tech/workflow/pkg/config"
 	"github.com/tradeline-tech/workflow/wrpc"
 )
 
@@ -19,16 +18,16 @@ import (
 type Tasks struct {
 
 	// Persisted in mongo
-	ID                     primitive.ObjectID       `bson:"_id" json:"_id"`     // Unique managed automatically by mongo driver
-	Name                   string                   `bson:"name" json:"tasks"`  // Unique user provided workflow Id, and employed as key within server workflows map.
-	Tasks                  []*TaskType              `bson:"tasks" json:"tasks"` // Task names persisted in mongo
-	TasksConfig            config.TaskConfiguration `bson:"tasksConfig" json:"tasksConfig"`
-	LastTaskIndexCompleted int                      `bson:"lastTaskIndexCompleted" json:"lastTaskIndexCompleted"`
-	LastTaskNameCompleted  string                   `bson:"lastTaskNameCompleted" json:"lastTaskNameCompleted"`
-	Completed              bool                     `bson:"completed" json:"completed"`
-	CompletedAt            time.Time                `bson:"completedAt" json:"completedAt"`
-	CreatedAt              time.Time                `bson:"createdAt" json:"createdAt"`
-	UpdatedAt              time.Time                `bson:"updatedAt" json:"updatedAt"`
+	ID                     primitive.ObjectID `bson:"_id" json:"_id"`     // Unique managed automatically by mongo driver
+	Name                   string             `bson:"name" json:"tasks"`  // Unique user provided workflow Id, and employed as key within server workflows map.
+	Tasks                  []*TaskType        `bson:"tasks" json:"tasks"` // Task names persisted in mongo
+	TasksConfig            TaskConfiguration  `bson:"tasksConfig" json:"tasksConfig"`
+	LastTaskIndexCompleted int                `bson:"lastTaskIndexCompleted" json:"lastTaskIndexCompleted"`
+	LastTaskNameCompleted  string             `bson:"lastTaskNameCompleted" json:"lastTaskNameCompleted"`
+	Completed              bool               `bson:"completed" json:"completed"`
+	CompletedAt            time.Time          `bson:"completedAt" json:"completedAt"`
+	CreatedAt              time.Time          `bson:"createdAt" json:"createdAt"`
+	UpdatedAt              time.Time          `bson:"updatedAt" json:"updatedAt"`
 
 	// Memory transient interfaces
 	TaskRunners  []TaskRunner `bson:"-" json:"-"`
@@ -37,7 +36,7 @@ type Tasks struct {
 
 // NewWorkflow gets a new initialized workflow struct
 func NewWorkflow(
-	cfg config.TaskConfiguration,
+	cfg TaskConfiguration,
 	srvMessenger MsgToRemote,
 	workflowName string,
 	tasksRunners TaskRunners) (*Tasks, error) {
@@ -117,7 +116,7 @@ func (workflow *Tasks) GetPendingRemoteTaskNames() []string {
 }
 
 // InitTasksMemState updates an existing workflow with the task runners that can be created only in memory
-func (workflow *Tasks) InitTasksMemState(config config.TaskConfiguration,
+func (workflow *Tasks) InitTasksMemState(config TaskConfiguration,
 	tasksRunnerNewFunc []TaskRunnerNewFunc) error {
 	if len(tasksRunnerNewFunc) != len(workflow.Tasks) {
 		return fmt.Errorf(`error workflow tasks length: %d != task runners length: %d\n

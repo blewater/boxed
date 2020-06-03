@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tradeline-tech/workflow/pkg/config"
 	"github.com/tradeline-tech/workflow/wrpc"
 )
 
@@ -35,7 +34,7 @@ type TaskRunner interface {
 }
 
 // TaskRunnerNewFunc is a workflow task runner constructor
-type TaskRunnerNewFunc = func(cfg config.TaskConfiguration) TaskRunner
+type TaskRunnerNewFunc = func(cfg TaskConfiguration) TaskRunner
 type TaskRunners = []TaskRunnerNewFunc
 
 type HandlerFuncType func() error

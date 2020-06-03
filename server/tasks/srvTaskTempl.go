@@ -1,7 +1,6 @@
 package tasks
 
 import (
-	"github.com/tradeline-tech/workflow/pkg/config"
 	"github.com/tradeline-tech/workflow/types"
 	"github.com/tradeline-tech/workflow/wrpc"
 )
@@ -9,7 +8,7 @@ import (
 // remoteGenericTaskForSrv is a placeholder of remotely executed tasks for
 // registering custom remote task names within the server workflow with a name.
 type remoteGenericTaskForSrv struct {
-	Config config.TaskConfiguration
+	Config types.TaskConfiguration
 	Task   *types.TaskType
 }
 
@@ -17,7 +16,7 @@ type remoteGenericTaskForSrv struct {
 // workflow task for the server workflow
 func NewRemoteGenericTaskForSrv(remoteTaskName string) types.TaskRunnerNewFunc {
 
-	return func(config config.TaskConfiguration) types.TaskRunner {
+	return func(config types.TaskConfiguration) types.TaskRunner {
 		taskRunner := &remoteGenericTaskForSrv{
 			Task: &types.TaskType{
 				Name:     remoteTaskName,

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/tradeline-tech/workflow/examples/secret"
-	"github.com/tradeline-tech/workflow/pkg/config"
 	"github.com/tradeline-tech/workflow/remote"
 	"github.com/tradeline-tech/workflow/types"
 	"github.com/tradeline-tech/workflow/wrpc"
@@ -15,12 +14,12 @@ import (
 // GenGy is a remotely executed task
 // bootstrapping a workflow with a name
 type GenGy struct {
-	Config config.TaskConfiguration
+	Config types.TaskConfiguration
 	Task   *types.TaskType
 }
 
 // NewGenGy returns a new task that bootstraps a new workflow with a unique name
-func NewGenGy(config config.TaskConfiguration) types.TaskRunner {
+func NewGenGy(config types.TaskConfiguration) types.TaskRunner {
 	taskRunner := &GenGy{
 		Config: config,
 		Task: &types.TaskType{
