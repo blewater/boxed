@@ -9,14 +9,18 @@ import (
 )
 
 func main() {
-	gRPCServer, port, err := server.StartUp("127.0.0.1", 8999, server.SrvTaskRunners{
-		/*
-		 * Server tasks
-		 */
-		tasks.NewRemoteGenericTaskForSrv("genGx"),
-		NewGenGy,
-		tasks.NewRemoteGenericTaskForSrv("genGxy"),
-	})
+	gRPCServer, port, err := server.StartUp(
+		true,
+		"127.0.0.1",
+		8999,
+		server.SrvTaskRunners{
+			/*
+			 * Server tasks
+			 */
+			tasks.NewRemoteGenericTaskForSrv("genGx"),
+			NewGenGy,
+			tasks.NewRemoteGenericTaskForSrv("genGxy"),
+		})
 	if err != nil {
 		fmt.Printf("server launching error : %s \n", err)
 		os.Exit(1)

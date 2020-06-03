@@ -28,19 +28,22 @@ type WorkflowsConfigType map[string]types.TaskConfiguration
 type SrvTaskRunners []types.TaskRunnerNewFunc
 
 // Server Workflow Loop Step Algorithm Actions
+type reqActionType int
+
 const (
 	// Continue processing. Non-disrupting action effect.
-	continueProcessing = 0
+	continueProcessing reqActionType = iota
 	// Stop processing this request.
-	haltRequestAction = 1
+	haltRequestAction
 	// Go back to listening for remote messages
 	// typically this is desirable after sending
 	// tasks for remote execution.
-	pauseServerProcessing    = 2
+	pauseServerProcessing
 	ConfigServerMessengerKey = "serverMessenger"
 )
 
 type WorkflowsServer struct {
+	// gRPC
 	wrpc.UnimplementedTaskCommunicatorServer
 	gRPCServer wrpc.TaskCommunicator_RunWorkflowServer
 
@@ -65,10 +68,11 @@ func recoverFromPanic() {
 // a business group of with an instance of a workflow.
 // Multiple workflows with the same declared tasks could run concurrently
 // by one Workflow server.
-func NewWorkflowsServer(srvTaskRunners SrvTaskRunners) *WorkflowsServer {
+func NewWorkflowsServer(soloWorkflow bool, srvTaskRunners SrvTaskRunners) *WorkflowsServer {
 	return &WorkflowsServer{
-		srvTaskRunners: srvTaskRunners,
-		workflows:      make(WorkflowsType),
+		soloWorkflowMode: soloWorkflow,
+		srvTaskRunners:   srvTaskRunners,
+		workflows:        make(WorkflowsType),
 		// Link the declared task runners above with the workflow server
 		TaskRunners:     srvTaskRunners,
 		workflowsConfig: make(WorkflowsConfigType),
@@ -227,8 +231,10 @@ func SendDataToServer(workflowNameKey string, data []string, config types.TaskCo
 }
 
 func StartUp(
+	soloWorkflow bool,
 	srvAddress string,
-	srvPort int, serverTaskRunners SrvTaskRunners) (gRpcServer *grpc.Server, port int, err error) {
+	srvPort int,
+	serverTaskRunners SrvTaskRunners) (gRpcServer *grpc.Server, port int, err error) {
 	srvAddressPort := fmt.Sprintf("%s:%d", srvAddress, srvPort)
 	tcpListener, err := net.Listen("tcp", srvAddressPort)
 	if err != nil {
@@ -237,7 +243,7 @@ func StartUp(
 	log.Println("listening at ", srvAddressPort)
 	gRpcServer = grpc.NewServer()
 
-	workflowServer := NewWorkflowsServer(serverTaskRunners)
+	workflowServer := NewWorkflowsServer(soloWorkflow, serverTaskRunners)
 
 	wrpc.RegisterTaskCommunicatorServer(gRpcServer, workflowServer)
 	log.Println("Workflow server starting...")
