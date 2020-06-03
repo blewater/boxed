@@ -31,12 +31,15 @@ type Tasks struct {
 	UpdatedAt              time.Time                `bson:"updatedAt" json:"updatedAt"`
 
 	// Memory transient interfaces
-	TaskRunners []TaskRunner                            `bson:"-" json:"-"`
-	gRpcSrv     wrpc.TaskCommunicator_RunWorkflowServer `bson:"-" json:"-"`
+	TaskRunners  []TaskRunner     `bson:"-" json:"-"`
+	srvMessenger wrpc.MsgToRemote `bson:"-" json:"-"`
 }
 
 // NewWorkflow gets a new initialized workflow struct
-func NewWorkflow(cfg config.TaskConfiguration, workflowName string,
+func NewWorkflow(
+	cfg config.TaskConfiguration,
+	srvMessenger wrpc.MsgToRemote,
+	workflowName string,
 	tasksRunners TaskRunners) (*Tasks, error) {
 	if workflowName == "" {
 		return nil, errors.New("empty workflow workflowName is not allowed")
@@ -60,6 +63,7 @@ func NewWorkflow(cfg config.TaskConfiguration, workflowName string,
 		TaskRunners:            workflowTaskRunners,
 		LastTaskIndexCompleted: -1,
 		TasksConfig:            cfg,
+		srvMessenger:           srvMessenger,
 	}, nil
 }
 
@@ -163,7 +167,7 @@ func (workflow *Tasks) SendTaskUpdateToRemote(taskIndex int, msgText string, err
 	runner := workflow.TaskRunners[taskIndex]
 	taskName := runner.GetTask().Name
 
-	return wrpc.SendServerTaskProgressToRemote(workflow.gRpcSrv, taskName, msgText, errIn)
+	return workflow.srvMessenger.SendServerTaskProgressToRemote(taskName, msgText, errIn)
 }
 
 func (workflow *Tasks) doRemainingTasks(ctx context.Context) error {
@@ -204,8 +208,7 @@ func (workflow *Tasks) doRemainingTasks(ctx context.Context) error {
 }
 
 // SendRemoteTasks sends tasks that need to be executed remotely
-func (workflow *Tasks) SendRemoteTasksToRun(
-	gRPCSrv wrpc.TaskCommunicator_RunWorkflowServer) (sentRemoteTasks bool, err error) {
+func (workflow *Tasks) SendRemoteTasksToRun() (sentRemoteTasks bool, err error) {
 	if workflow.LastTaskIndexCompleted+1 >= workflow.GetLen() ||
 		workflow.Tasks[workflow.LastTaskIndexCompleted+1].IsServer {
 		return false, nil
@@ -227,7 +230,7 @@ func (workflow *Tasks) SendRemoteTasksToRun(
 		return false, nil
 	}
 
-	errSend := wrpc.SendRemoteTasksToRun(gRPCSrv, remoteTaskNames)
+	errSend := workflow.srvMessenger.SendRemoteTasksToRun(remoteTaskNames)
 
 	if errSend != nil {
 		return false, errSend
