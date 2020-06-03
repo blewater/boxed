@@ -61,8 +61,6 @@ func (r *Remote) ProcessGRPCMessages() error {
 
 	var messenger types.MsgToSrv
 	messenger = r.getRemoteMessenger(gRPCRemoteConnToSrv)
-	// Server would detect this at its end as an I/O error
-	defer endRemoteToSrvConnection(gRPCRemoteConnToSrv)
 
 	if err = messenger.SendWorkflowNameKeyToSrv(r.workflowNameKeyValue); err != nil {
 		return err
