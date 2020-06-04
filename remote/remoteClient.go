@@ -9,6 +9,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -58,6 +59,8 @@ func (r *Remote) ProcessGRPCMessages() error {
 
 		return err
 	}
+
+	defer gRPCRemoteConnToSrv.CloseSend()
 
 	var messenger types.MsgToSrv
 	messenger = r.getRemoteMessenger(gRPCRemoteConnToSrv)
@@ -328,7 +331,7 @@ func connectToServerWithoutTLS(
 
 	gRPCRemote := wrpc.NewTaskCommunicatorClient(clientConn)
 
-	return gRPCRemote, err
+	return gRPCRemote, clientConn, err
 }
 
 // StartWorkflow connects to the server and runs the declared workflow.
@@ -336,11 +339,17 @@ func StartWorkflow(
 	serverAddress string,
 	port int, remoteTaskRunners types.TaskRunners) error {
 	ctx := context.Background()
+	// Timeout connection allowance
 
-	client, err := connectToServerWithoutTLS(ctx, serverAddress, port)
+	ctxRemoteTimeout, cancel := context.WithTimeout(ctx, types.ConnectionTimeoutSec*time.Second)
+	defer cancel()
+
+	gRPCClient, tcpConn, err := connectToServerWithoutTLS(ctxRemoteTimeout, serverAddress, port)
 	if err != nil {
-		return err
+		log.Fatalf("Could not connect to workflow server %s:%d\n", serverAddress, port)
 	}
+
+	defer tcpConn.Close()
 
 	var cfg types.TaskConfiguration = config.NewTasksBoostrapConfig()
 	cfg.Add(types.WorkflowKey, "dh-secret")

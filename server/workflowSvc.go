@@ -115,12 +115,25 @@ func (srv *WorkflowsServer) RunWorkflow(gRPCConnToRemote wrpc.TaskCommunicator_R
 	return nil
 }
 
+// soloModeTerminate blocks new connections and messages and wait for client
+// connections to release before timing out and stopping forcefully.
 func (srv *WorkflowsServer) soloModeTerminate() {
 	if srv.soloWorkflowMode {
-		log.Println("Solo workflow mode...")
-		// 2 seconds, yield cpu for the previous termination message to dispatch
-		time.Sleep(2)
-		srv.server.GracefulStop()
+		log.Println("Exiting because in solo workflow mode...")
+
+		stopChan := make(chan struct{})
+		go func() {
+			srv.server.GracefulStop()
+			close(stopChan)
+		}()
+
+		timer := time.NewTimer(types.ConnectionTimeoutSec * time.Second)
+		select {
+		case <-timer.C:
+			srv.server.Stop()
+		case <-stopChan:
+			timer.Stop()
+		}
 	}
 }
 

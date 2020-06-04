@@ -5,7 +5,11 @@ import (
 	"github.com/tradeline-tech/workflow/wrpc"
 )
 
-const WorkflowKey = "workflowKey"
+const (
+	ConfigWorkflowKey = "workflowKey"
+
+	ConnectionTimeoutSec = 2
+)
 
 type MsgToRemote interface {
 	SendServerTaskProgressToRemote(taskName, msgText string, errIn error) error
