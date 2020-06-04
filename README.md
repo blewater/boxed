@@ -3,10 +3,10 @@
 Run your distributed tasks fluently over gRPC asynchronous streaming goodness.
 
 ## Why?
-Because running your asynchronous distributed activities as a cohesive linear workflow is hard.
+Because running asynchronous distributed activities as a cohesive linear workflow is hard.
  
 ## Use Cases
-* Distributed Docker deployments.
+* Distributed Docker, K8s deployments.
 
 * Remote Batch Processing.
 
@@ -17,11 +17,11 @@ Because running your asynchronous distributed activities as a cohesive linear wo
 * Any loosely-coupled server to remote activities.
 
 ## Examples
-* _~~Guess~~_[Hack the shared (Diffie-Hellman) secret.](https://github.com/tradeline-tech/workflow/tree/development/examples/secret)
+* _~~Guess~~_[Hack the shared (Diffie-Hellman) secret.](https://github.com/tradeline-tech/workflow/tree/development/examples/secret) (crack the secret with your add-on, and we will feature your solution).
+
+* Distributed K8s deployment.
 
 * Remote Tic-tac-toe play.
-
-* Remote docker deployment.
 
 ## Features
 * Dynamic task configuration bootstrapping.
