@@ -4,7 +4,7 @@ type TasksBootstrapConfig struct {
 	kv map[string]interface{}
 }
 
-func NewTasksBoostrapConfig() *TasksBootstrapConfig {
+func NewTasksBootstrapConfig() *TasksBootstrapConfig {
 	return &TasksBootstrapConfig{
 		kv: make(map[string]interface{}),
 	}

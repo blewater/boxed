@@ -24,7 +24,7 @@ type WorkflowServerReq struct {
 func NewWorkflowReq(srv *WorkflowsServer, gRPCConnToRemote wrpc.TaskCommunicator_RunWorkflowServer) *WorkflowServerReq {
 	return &WorkflowServerReq{
 		WorkflowServer: srv,
-		cfg:            config.NewTasksBoostrapConfig(),
+		cfg:            config.NewTasksBootstrapConfig(),
 		messenger:      wrpc.NewSrvMessenger(gRPCConnToRemote),
 	}
 }
