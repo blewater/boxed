@@ -64,6 +64,10 @@ func DefaultLogsFile(logFilename string) error {
 	return nil
 }
 
+func LogsToStdErr() {
+	InitLog(os.Stderr, os.Stderr, os.Stderr, os.Stderr)
+}
+
 func DiscardLog() {
 	InitLog(ioutil.Discard, ioutil.Discard, ioutil.Discard, ioutil.Discard)
 }

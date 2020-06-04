@@ -146,7 +146,7 @@ func stepCheckIOError(ctx context.Context, remoteMsg *wrpc.RemoteMsg, err error)
 	}
 
 	if err != nil {
-		log.Println("error : ", err, ", server message reception error. Is the remote client still up?")
+		log.Println(err, ", server message reception error. Is the remote client still up?")
 
 		return true
 	}
@@ -158,7 +158,7 @@ func stepCheckIOError(ctx context.Context, remoteMsg *wrpc.RemoteMsg, err error)
 	}
 
 	if remoteMsg == nil {
-		log.Println("error : ", err, ", "+
+		log.Println(err, ", "+
 			"received nil remote message. Remote likely closed the connection.")
 
 		return true

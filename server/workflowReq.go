@@ -66,7 +66,7 @@ func (req *WorkflowServerReq) initWorkflow(
 	// 2nd Attempt to load workflow from the database
 	foundWorkflow, err = readWorkflowFromDB(ctx, req.workflowNameKey)
 	if err != nil {
-		log.Println("error : ", err, "while initializing workflow from the database")
+		log.Println(err, "while initializing workflow from the database")
 		return nil, nil
 	}
 
@@ -188,7 +188,7 @@ func (req *WorkflowServerReq) saveRemoteTaskCompletion(
 	defer req.safeSaveWorkflow()
 
 	if err = req.workflow.CopyRemoteTasksProgress(remoteMsg); err != nil {
-		log.Println("error : ", err, ", server workflow state is invalid")
+		log.Println(err, ", server workflow state is invalid")
 
 		return tasksCompleted, err
 	}
@@ -305,7 +305,7 @@ func (req *WorkflowServerReq) printRemoteTaskError(remoteMsg *wrpc.RemoteMsg) re
 		log.Printf("Remote task %s erred: %s\n", remoteMsg.TaskInProgress, remoteMsg.ErrorMsg)
 
 		if err := req.workflow.CopyRemoteTasksProgress(remoteMsg); err != nil {
-			log.Println("error : ", err, "while processing Remote messages")
+			log.Println(err, "while processing Remote messages")
 
 			return exitServer
 		}

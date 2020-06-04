@@ -55,7 +55,7 @@ func (r *Remote) ProcessGRPCMessages() error {
 	// Connect with streaming connection to the server
 	gRPCRemoteConnToSrv, err := r.gRPCRemote.RunWorkflow(r.ctx)
 	if err != nil {
-		log.Println("error : ", err, ", while calling server.RunWorkflow()")
+		log.Println(err, ", while calling server.RunWorkflow()")
 
 		return err
 	}
@@ -136,7 +136,7 @@ func (r *Remote) saveServerData(serverMsg *wrpc.ServerMsg) {
 
 func handleSrvMsgErr(serverMsg *wrpc.ServerMsg, err error) error {
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "error : ", err, ", ambiguous error message from server")
+		_, _ = fmt.Fprintln(os.Stderr, err, ", ambiguous error message from server")
 
 		return err
 	}
@@ -178,7 +178,7 @@ func (r *Remote) runRemoteWorkflow(messenger types.MsgToSrv, remoteTaskNames []s
 				return err
 			}
 			if err := r.runReceivedTasks(messenger, tasksToRun); err != nil {
-				log.Println("error : ", err, ", while running Remote tasks")
+				log.Println(err, ", while running Remote tasks")
 
 				return err
 			}
@@ -250,7 +250,7 @@ func (r *Remote) runReceivedTasks(messenger types.MsgToSrv, remoteTasks *types.T
 		log.Println(msg)
 
 		if err := messenger.SendTaskStatusToServer(r.workflowNameKeyValue, msg); err != nil {
-			log.Println("error : ", err, "failed to send task status message")
+			log.Println(err, "failed to send task status message")
 		}
 
 		if err := types.ValidDo(taskRunner); err != nil {

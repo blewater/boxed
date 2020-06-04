@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"runtime"
 	"strings"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/tradeline-tech/workflow/datastore"
+	"github.com/tradeline-tech/workflow/pkg/log"
 	"github.com/tradeline-tech/workflow/wrpc"
 )
 
