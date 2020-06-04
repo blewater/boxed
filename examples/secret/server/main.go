@@ -23,7 +23,7 @@ func main() {
 			tasks.NewGenGy,
 			types.RegisterRemoteTask("genGyx"),
 			tasks.NewGenGxy,
-			types.RegisterRemoteTask("validate"),
+			types.RegisterRemoteTask("confirm"),
 		}); err != nil {
 		panic("server launching error : " + err.Error())
 	}

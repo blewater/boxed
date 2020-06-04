@@ -11,15 +11,15 @@ import (
 	"github.com/tradeline-tech/workflow/wrpc"
 )
 
-// GenGxy is a server executed task and calculates g^y.
-type GenGxy struct {
+// genGxy is a server executed task and calculates g^y.
+type genGxy struct {
 	Config types.TaskConfiguration
 	Task   *types.TaskType
 }
 
 // NewGenGxy returns a server task that calculates g^y on the server.
 func NewGenGxy(config types.TaskConfiguration) types.TaskRunner {
-	taskRunner := &GenGxy{
+	taskRunner := &genGxy{
 		Config: config,
 		Task: &types.TaskType{
 			Name:       types.GetTaskName(),
@@ -32,7 +32,7 @@ func NewGenGxy(config types.TaskConfiguration) types.TaskRunner {
 }
 
 // Do the task
-func (task *GenGxy) Do() error {
+func (task *genGxy) Do() error {
 	rand.Seed(time.Now().UnixNano())
 
 	if err := task.Validate(); err != nil {
@@ -61,8 +61,8 @@ func (task *GenGxy) Do() error {
 	gxy := secret.GetModOfPow(gx, y, p)
 
 	return server.SendDataToRemote([]string{
-		secret.IsSecretEq,
-		strconv.FormatBool(secret.SecretIsSame(gyx, gxy)),
+		secret.IsSecretSame,
+		strconv.FormatBool(secret.IsSame(gyx, gxy)),
 		secret.GYtoX,
 		strconv.FormatInt(gyx, 10),
 		secret.GXtoY,
@@ -71,7 +71,7 @@ func (task *GenGxy) Do() error {
 }
 
 // Validate if task completed
-func (task *GenGxy) Validate() error {
+func (task *genGxy) Validate() error {
 	_, ok := task.Config.Get(secret.P)
 	if !ok {
 		return secret.GetValueNotFoundErrFunc(secret.P)
@@ -96,22 +96,22 @@ func (task *GenGxy) Validate() error {
 }
 
 // Rollback if task failed
-func (task *GenGxy) Rollback() error {
+func (task *genGxy) Rollback() error {
 	return nil
 }
 
 // GetProp returns a task config property
-func (task *GenGxy) GetProp(key string) (interface{}, bool) {
+func (task *genGxy) GetProp(key string) (interface{}, bool) {
 	return task.Config.Get(key)
 }
 
 // GetTask returns this runner's task
-func (task *GenGxy) GetTask() *types.TaskType {
+func (task *genGxy) GetTask() *types.TaskType {
 	return task.Task
 }
 
 // PostRemoteTasksCompletion performs any server workflow task work upon
 // completing the remote task work e.g., saving remote task configuration
 // to workflow's state
-func (task *GenGxy) PostRemoteTasksCompletion(msg *wrpc.RemoteMsg) {
+func (task *genGxy) PostRemoteTasksCompletion(msg *wrpc.RemoteMsg) {
 }

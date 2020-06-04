@@ -12,17 +12,17 @@ import (
 	"github.com/tradeline-tech/workflow/wrpc"
 )
 
-// GenGx is a remotely executed task asking user to pick p, randomly picking g
+// genGx is a remotely executed task asking user to pick p, randomly picking g
 // and calculating g^x. This is the genesis task and runs remotely
 // interactively in stdin/out.
-type GenGx struct {
+type genGx struct {
 	Config types.TaskConfiguration
 	Task   *types.TaskType
 }
 
 // NewGenGx returns a new task that bootstraps a new workflow with a unique name
 func NewGenGx(config types.TaskConfiguration) types.TaskRunner {
-	taskRunner := &GenGx{
+	taskRunner := &genGx{
 		Config: config,
 		Task: &types.TaskType{
 			Name:       types.GetTaskName(),
@@ -35,17 +35,47 @@ func NewGenGx(config types.TaskConfiguration) types.TaskRunner {
 }
 
 // Do the task
-func (task *GenGx) Do() error {
+func (task *genGx) Do() error {
+	rand.Seed(time.Now().UnixNano())
+
+	printIntro()
+
+	p := getPrimeFromUser()
+
+	task.Config.Add(secret.P, p)
+
+	roots := getRoots(p)
+
+	// Select a random generator g from the
+	// primitive roots of P.
+	g := roots[rand.Int63n(int64(len(roots)))]
+	task.Config.Add(secret.G, g)
+
+	// Choose random x and save for future use
+	// when we receive g^y
+	x := rand.Int63n(p/2) + (p / 2)
+	task.Config.Add(secret.X, x)
+
+	gX := secret.GetModOfPow(g, x, p)
+
+	return remote.SendDataToServer(
+		secret.WorkflowNameKey,
+		[]string{
+			secret.P,
+			strconv.FormatInt(p, 10),
+			secret.G,
+			strconv.FormatInt(g, 10),
+			secret.GtoX,
+			strconv.FormatInt(gX, 10),
+		},
+		task.Config)
+}
+
+func getPrimeFromUser() int64 {
 	var (
 		pChoice byte = 101
 		err     error
 	)
-	rand.Seed(time.Now().UnixNano())
-	fmt.Printf("\n%s\n%s\n%s\n%s\n\n",
-		"This workflow employs a secure method to share a common secret between two parties.",
-		"Despite the usage of randomizer for seeding, the final result is a shared secret",
-		"calculated differently but producing the same result in the server and remote party.",
-		"Your choice below determines the upper limit of the final answer: 1...(n-1).")
 
 	for {
 		fmt.Printf("Choose  a Or b Or c:\n\t\t\ta. 101\n\t\t\tb. 113\n\t\t\tc. 199\n")
@@ -62,32 +92,19 @@ func (task *GenGx) Do() error {
 	case 'c':
 		p = 199
 	}
-	task.Config.Add(secret.P, p)
-	roots := getRoots(p)
+	return p
+}
 
-	// Select a random generator
-	g := roots[rand.Int63n(int64(len(roots)))]
-	task.Config.Add(secret.G, g)
-
-	x := rand.Int63n(p/2) + (p / 2)
-	task.Config.Add(secret.X, x)
-	gX := secret.GetModOfPow(g, x, p)
-
-	return remote.SendDataToServer(
-		secret.WorkflowNameKey,
-		[]string{
-			secret.P,
-			strconv.FormatInt(p, 10),
-			secret.G,
-			strconv.FormatInt(g, 10),
-			secret.GtoX,
-			strconv.FormatInt(gX, 10),
-		},
-		task.Config)
+func printIntro() {
+	fmt.Printf("\n%s\n%s\n%s\n%s\n\n",
+		"This workflow employs a secure method to share a common secret between two parties.",
+		"Despite the usage of randomizer for seeding, the final result is a shared secret",
+		"calculated differently but producing the same result in the server and remote party.",
+		"Your choice below determines the upper limit of the final answer: 1...(n-1).")
 }
 
 // Validate if task completed
-func (task *GenGx) Validate() error {
+func (task *genGx) Validate() error {
 	_, ok := task.Config.Get(secret.X)
 	if !ok {
 		return secret.GetValueNotFoundErrFunc(secret.X)
@@ -97,24 +114,24 @@ func (task *GenGx) Validate() error {
 }
 
 // Rollback if task failed
-func (task *GenGx) Rollback() error {
+func (task *genGx) Rollback() error {
 	return nil
 }
 
 // GetProp returns a task config property
-func (task *GenGx) GetProp(key string) (interface{}, bool) {
+func (task *genGx) GetProp(key string) (interface{}, bool) {
 	return task.Config.Get(key)
 }
 
 // GetTask returns this runner's task
-func (task *GenGx) GetTask() *types.TaskType {
+func (task *genGx) GetTask() *types.TaskType {
 	return task.Task
 }
 
 // PostRemoteTasksCompletion performs any server workflow task work upon
 // completing the remote task work e.g., saving remote task configuration
 // to workflow's state
-func (task *GenGx) PostRemoteTasksCompletion(msg *wrpc.RemoteMsg) {
+func (task *genGx) PostRemoteTasksCompletion(msg *wrpc.RemoteMsg) {
 }
 
 // getRoots returns all the primitive roots modulo nPrime so that g is

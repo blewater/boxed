@@ -11,15 +11,15 @@ import (
 const (
 	WorkflowNameKey = "secret"
 
-	G          = "g"
-	P          = "p"
-	Y          = "y"
-	X          = "x"
-	GtoY       = "gy"
-	GtoX       = "gx"
-	GXtoY      = "gxy"
-	GYtoX      = "gyx"
-	IsSecretEq = "eq"
+	G            = "g"
+	P            = "p"
+	Y            = "y"
+	X            = "x"
+	GtoY         = "gy"
+	GtoX         = "gx"
+	GXtoY        = "gxy"
+	GYtoX        = "gyx"
+	IsSecretSame = "eq"
 )
 
 // GetModOfPow returns the modulo of raising an integer ^ exponent
@@ -34,8 +34,8 @@ func GetModOfPow(integer, exponent, n int64) int64 {
 	return res
 }
 
-// SecretIsSame answers whether the args are equal and prints it so.
-func SecretIsSame(gyx, gxy int64) bool {
+// IsSame answers whether the args are equal and prints it so.
+func IsSame(gyx, gxy int64) bool {
 	fmt.Println("g^xy :", gxy, "g^yx :", gyx, " equal?", gxy == gyx)
 
 	return gyx == gxy

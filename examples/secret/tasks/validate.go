@@ -11,15 +11,15 @@ import (
 	"github.com/tradeline-tech/workflow/wrpc"
 )
 
-// validate is a server executed task and calculates g^y.
-type validate struct {
+// confirm is a server executed task and calculates g^y.
+type confirm struct {
 	Config types.TaskConfiguration
 	Task   *types.TaskType
 }
 
-// NewValidate returns a server task that calculates g^y on the server.
-func NewValidate(config types.TaskConfiguration) types.TaskRunner {
-	taskRunner := &validate{
+// NewConfirm returns a server task that calculates g^y on the server.
+func NewConfirm(config types.TaskConfiguration) types.TaskRunner {
+	taskRunner := &confirm{
 		Config: config,
 		Task: &types.TaskType{
 			Name:       types.GetTaskName(),
@@ -32,7 +32,7 @@ func NewValidate(config types.TaskConfiguration) types.TaskRunner {
 }
 
 // Do the task
-func (task *validate) Do() error {
+func (task *confirm) Do() error {
 	rand.Seed(time.Now().UnixNano())
 
 	if err := task.Validate(); err != nil {
@@ -49,7 +49,7 @@ func (task *validate) Do() error {
 		return err
 	}
 
-	if res := secret.SecretIsSame(gyx, gxy); !res {
+	if res := secret.IsSame(gyx, gxy); !res {
 		return errors.New("validation failed")
 	}
 
@@ -59,7 +59,7 @@ func (task *validate) Do() error {
 }
 
 // Validate if task completed
-func (task *validate) Validate() error {
+func (task *confirm) Validate() error {
 	_, ok := task.Config.Get(secret.GXtoY)
 	if !ok {
 		return secret.GetValueNotFoundErrFunc(secret.GtoX)
@@ -74,22 +74,22 @@ func (task *validate) Validate() error {
 }
 
 // Rollback if task failed
-func (task *validate) Rollback() error {
+func (task *confirm) Rollback() error {
 	return nil
 }
 
 // GetProp returns a task config property
-func (task *validate) GetProp(key string) (interface{}, bool) {
+func (task *confirm) GetProp(key string) (interface{}, bool) {
 	return task.Config.Get(key)
 }
 
 // GetTask returns this runner's task
-func (task *validate) GetTask() *types.TaskType {
+func (task *confirm) GetTask() *types.TaskType {
 	return task.Task
 }
 
 // PostRemoteTasksCompletion performs any server workflow task work upon
 // completing the remote task work e.g., saving remote task configuration
 // to workflow's state
-func (task *validate) PostRemoteTasksCompletion(msg *wrpc.RemoteMsg) {
+func (task *confirm) PostRemoteTasksCompletion(msg *wrpc.RemoteMsg) {
 }

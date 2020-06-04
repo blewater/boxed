@@ -11,15 +11,15 @@ import (
 	"github.com/tradeline-tech/workflow/wrpc"
 )
 
-// GenGy is a server executed task and calculates g^y.
-type GenGy struct {
+// genGy is a server executed task and calculates g^y.
+type genGy struct {
 	Config types.TaskConfiguration
 	Task   *types.TaskType
 }
 
 // NewGenGy returns a server task that calculates g^y on the server.
 func NewGenGy(config types.TaskConfiguration) types.TaskRunner {
-	taskRunner := &GenGy{
+	taskRunner := &genGy{
 		Config: config,
 		Task: &types.TaskType{
 			Name:       types.GetTaskName(),
@@ -32,7 +32,7 @@ func NewGenGy(config types.TaskConfiguration) types.TaskRunner {
 }
 
 // Do the task
-func (task *GenGy) Do() error {
+func (task *genGy) Do() error {
 	rand.Seed(time.Now().UnixNano())
 
 	if err := task.Validate(); err != nil {
@@ -60,7 +60,7 @@ func (task *GenGy) Do() error {
 }
 
 // Validate if task completed
-func (task *GenGy) Validate() error {
+func (task *genGy) Validate() error {
 	_, ok := task.Config.Get(secret.G)
 	if !ok {
 		return secret.GetValueNotFoundErrFunc(secret.G)
@@ -78,22 +78,22 @@ func (task *GenGy) Validate() error {
 }
 
 // Rollback if task failed
-func (task *GenGy) Rollback() error {
+func (task *genGy) Rollback() error {
 	return nil
 }
 
 // GetProp returns a task config property
-func (task *GenGy) GetProp(key string) (interface{}, bool) {
+func (task *genGy) GetProp(key string) (interface{}, bool) {
 	return task.Config.Get(key)
 }
 
 // GetTask returns this runner's task
-func (task *GenGy) GetTask() *types.TaskType {
+func (task *genGy) GetTask() *types.TaskType {
 	return task.Task
 }
 
 // PostRemoteTasksCompletion performs any server workflow task work upon
 // completing the remote task work e.g., saving remote task configuration
 // to workflow's state
-func (task *GenGy) PostRemoteTasksCompletion(msg *wrpc.RemoteMsg) {
+func (task *genGy) PostRemoteTasksCompletion(msg *wrpc.RemoteMsg) {
 }
