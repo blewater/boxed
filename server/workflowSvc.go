@@ -45,7 +45,8 @@ const (
 )
 
 type WorkflowsServer struct {
-	// gRPC
+	// gRPC state and Api
+	server *grpc.Server
 	wrpc.UnimplementedTaskCommunicatorServer
 	gRPCServer wrpc.TaskCommunicator_RunWorkflowServer
 
@@ -72,8 +73,9 @@ func recoverFromPanic() {
 // a business group of with an instance of a workflow.
 // Multiple workflows with the same declared tasks could run concurrently
 // by one Workflow server.
-func NewWorkflowsServer(soloWorkflow bool, srvTaskRunners SrvTaskRunners) *WorkflowsServer {
+func NewWorkflowsServer(server *grpc.Server, soloWorkflow bool, srvTaskRunners SrvTaskRunners) *WorkflowsServer {
 	return &WorkflowsServer{
+		server:           server,
 		soloWorkflowMode: soloWorkflow,
 		srvTaskRunners:   srvTaskRunners,
 		workflows:        make(WorkflowsType),
@@ -108,19 +110,18 @@ func (srv *WorkflowsServer) RunWorkflow(gRPCConnToRemote wrpc.TaskCommunicator_R
 
 	defer req.safeSaveWorkflow()
 
-	if srv.soloWorkflowMode {
-		terminate()
-	}
+	srv.soloModeTerminate()
 
 	return nil
 }
 
-func terminate() {
-	log.Println("Solo workflow mode...shutting down.")
-	// yield cpu for the termination message to dispatch
-	time.Sleep(2)
-
-	os.Exit(0)
+func (srv *WorkflowsServer) soloModeTerminate() {
+	if srv.soloWorkflowMode {
+		log.Println("Solo workflow mode...")
+		// 2 seconds, yield cpu for the previous termination message to dispatch
+		time.Sleep(2)
+		srv.server.GracefulStop()
+	}
 }
 
 // 1. Check whether the protocol errs
@@ -243,7 +244,7 @@ func StartUp(
 	log.Println("listening at ", srvAddressPort)
 	gRpcServer = grpc.NewServer()
 
-	workflowServer := NewWorkflowsServer(soloWorkflow, serverTaskRunners)
+	workflowServer := NewWorkflowsServer(gRpcServer, soloWorkflow, serverTaskRunners)
 
 	wrpc.RegisterTaskCommunicatorServer(gRpcServer, workflowServer)
 	log.Println("Workflow server starting...")
