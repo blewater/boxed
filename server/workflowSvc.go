@@ -244,18 +244,17 @@ func SendDataToRemote(data []string, config types.TaskConfiguration) error {
 	return messenger.SendDataToRemote(data)
 }
 
-func StartUp(
-	soloWorkflow bool,
-	srvAddress string,
-	srvPort int,
-	serverTaskRunners SrvTaskRunners) (gRpcServer *grpc.Server, port int, err error) {
+// Startup is Cli helper to start a gRPC workflow server without secure transport.
+func StartUp(soloWorkflow bool, srvAddress string, srvPort int, serverTaskRunners SrvTaskRunners) error {
 	srvAddressPort := fmt.Sprintf("%s:%d", srvAddress, srvPort)
 	tcpListener, err := net.Listen("tcp", srvAddressPort)
+
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to listen at tcp %s", srvAddressPort)
+		return fmt.Errorf("failed to listen at tcp %s", srvAddressPort)
 	}
+
 	log.Println("listening at ", srvAddressPort)
-	gRpcServer = grpc.NewServer()
+	gRpcServer := grpc.NewServer()
 
 	workflowServer := NewWorkflowsServer(gRpcServer, soloWorkflow, serverTaskRunners)
 
@@ -266,7 +265,7 @@ func StartUp(
 		log.Println(err, "failed to start Workflow server")
 	}
 
-	return gRpcServer, port, nil
+	return nil
 }
 
 // GracefulShutdown handles the server shutdown process after receiving a signal

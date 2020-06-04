@@ -1,34 +1,23 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/tradeline-tech/workflow/server"
 	"github.com/tradeline-tech/workflow/server/tasks"
 )
 
 func main() {
-	gRPCServer, port, err := server.StartUp(
+	if err := server.StartUp(
 		true,
 		"127.0.0.1",
 		8999,
 		server.SrvTaskRunners{
 			/*
-			 * Server tasks
+			 * Workflow tasks
 			 */
 			tasks.NewRemoteGenericTaskForSrv("genGx"),
 			NewGenGy,
 			tasks.NewRemoteGenericTaskForSrv("genGyx"),
-		})
-	if err != nil {
-		fmt.Printf("server launching error : %s \n", err)
-		os.Exit(1)
+		}); err != nil {
+		panic("server launching error : " + err.Error())
 	}
-
-	// Select ctrl-C to terminate server
-	server.SetupSigTermCloseHandler(gRPCServer)
-
-	fmt.Printf("workflow server started @ localhost:%d\n", port)
-	fmt.Println("Press Ctrl-C to exit server...")
 }

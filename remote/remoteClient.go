@@ -319,7 +319,7 @@ func SendDataToServer(workflowNameKey string, data []string, config types.TaskCo
 // connectToServerWithoutTLS connects to the workflow server without public
 // asymmetric encryption (TLS) to the provided address and port.
 func connectToServerWithoutTLS(
-	ctx context.Context, serverAddress string, port int) (wrpc.TaskCommunicatorClient, error) {
+	ctx context.Context, serverAddress string, port int) (wrpc.TaskCommunicatorClient, *grpc.ClientConn, error) {
 	clientConn, err := grpc.DialContext(ctx, fmt.Sprintf("%s:%d",
 		serverAddress, port),
 		grpc.WithInsecure(),
@@ -336,8 +336,10 @@ func connectToServerWithoutTLS(
 
 // StartWorkflow connects to the server and runs the declared workflow.
 func StartWorkflow(
+	workflowNameKey,
 	serverAddress string,
-	port int, remoteTaskRunners types.TaskRunners) error {
+	port int,
+	remoteTaskRunners types.TaskRunners) error {
 	ctx := context.Background()
 	// Timeout connection allowance
 
@@ -352,13 +354,13 @@ func StartWorkflow(
 	defer tcpConn.Close()
 
 	var cfg types.TaskConfiguration = config.NewTasksBoostrapConfig()
-	cfg.Add(types.WorkflowKey, "dh-secret")
+	cfg.Add(types.ConfigWorkflowKey, "dh-secret")
 
 	remote := New(
 		ctx,
-		client,
+		gRPCClient,
 		cfg,
-		"dh-secret",
+		workflowNameKey,
 		copyTaskRunnersToMap(remoteTaskRunners))
 
 	return remote.ProcessGRPCMessages()

@@ -1,25 +1,24 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/tradeline-tech/workflow/remote"
 	"github.com/tradeline-tech/workflow/types"
 )
 
+const workflowName = "dh-secret"
+
 func main() {
-	serverAddress := "127.0.0.1"
-	port := 8999
-	err := remote.StartWorkflow(serverAddress, port, types.TaskRunners{
-		/*
-		 * Set Remote Tasks here
-		 */
-		NewGenGx,
-		NewGenGyx,
-	})
-	if err != nil {
-		fmt.Printf("server @ %s:%d with error : %s\n", serverAddress, port, err)
-		os.Exit(1)
+	if err := remote.StartWorkflow(
+		workflowName,
+		"127.0.0.1",
+		8999,
+		types.TaskRunners{
+			/*
+			 * Set Remote Tasks here
+			 */
+			NewGenGx,
+			NewGenGyx,
+		}); err != nil {
+		panic(err)
 	}
 }
