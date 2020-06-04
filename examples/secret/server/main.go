@@ -14,9 +14,9 @@ func main() {
 			/*
 			 * Workflow tasks
 			 */
-			tasks.NewRemoteGenericTaskForSrv("genGx"),
+			tasks.RemoteTask("genGx"),
 			NewGenGy,
-			tasks.NewRemoteGenericTaskForSrv("genGyx"),
+			tasks.RemoteTask("genGyx"),
 		}); err != nil {
 		panic("server launching error : " + err.Error())
 	}

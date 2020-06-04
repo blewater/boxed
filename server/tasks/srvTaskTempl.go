@@ -13,8 +13,8 @@ type remoteGenericTaskForSrv struct {
 }
 
 // NewGetWorkflowName returns a new task runner func to register a remote
-// workflow task for the server workflow
-func NewRemoteGenericTaskForSrv(remoteTaskName string) types.TaskRunnerNewFunc {
+// workflow task for the workflow
+func RemoteTask(remoteTaskName string) types.TaskRunnerNewFunc {
 
 	return func(config types.TaskConfiguration) types.TaskRunner {
 		taskRunner := &remoteGenericTaskForSrv{
