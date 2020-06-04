@@ -41,6 +41,12 @@ func (task *GenGx) Do() error {
 		err     error
 	)
 	rand.Seed(time.Now().UnixNano())
+	fmt.Printf("\n%s\n%s\n%s\n%s\n\n",
+		"This workflow employs a secure method to share a common secret between two parties.",
+		"Despite the usage of randomizer for seeding, the final result is a shared secret",
+		"calculated differently but producing the same result in the server and remote party.",
+		"Your choice below determines the upper limit of the final answer: 1...(n-1).")
+
 	for {
 		fmt.Printf("Choose  a Or b Or c:\n\t\t\ta. 101\n\t\t\tb. 113\n\t\t\tc. 199\n")
 		if _, err = fmt.Scanf("%c", &pChoice); err == nil && (pChoice == 'a' || pChoice == 'b' || pChoice == 'c') {

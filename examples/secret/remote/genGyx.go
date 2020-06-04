@@ -68,13 +68,12 @@ func (task *GenGyx) Do() error {
 			hits++
 		}
 	}
-	if hits == 0 {
-		fmt.Println("Sorry better luck next time :)")
-		return nil
-	}
+	fmt.Printf("The secret is --> %d\n", gYX)
 	switch hits {
+	case 0:
+		fmt.Println("Sorry better luck next time :)")
 	case 1:
-		fmt.Println("Good job! Beginner's luck? Have another go for a chance to beat this.")
+		fmt.Println("Good job! Beginner's luck? Have another go for a chance to beat this :)")
 	case 2, 3:
 		fmt.Println("Excellent job! Please share your coding solution to feature it on this site :)")
 	}
