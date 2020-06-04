@@ -3,6 +3,8 @@ package types
 import (
 	"fmt"
 	"time"
+
+	"github.com/tradeline-tech/workflow/pkg/log"
 )
 
 // TaskType represents a unit of work that needs to happen on the server or client side
@@ -21,16 +23,16 @@ type TaskType struct {
 type HandlerFuncType func() error
 
 func (t *TaskType) Print() {
-	fmt.Printf(
+	log.Printf(
 		"Task name: %s, isServer: #{task.IsServer},  description #{task.Description}", t.Name)
 
 	if t.Completed {
-		fmt.Printf(", not completed yet.\n")
+		log.Printf(", not completed yet.\n")
 
 		return
 	}
 
-	fmt.Println(", is done!")
+	log.Println(", is done!")
 }
 
 // doWithRollback executes a task's Do() with Rollback upon failure and returns combined errors
@@ -61,7 +63,7 @@ func ValidDo(runner TaskRunner) error {
 	if !task.RunDoFirst {
 		if errValidation := runner.Validate(); errValidation == nil {
 			task.setCompleted()
-			fmt.Println("Validate() succeeded exiting...")
+			log.Println("Validate() succeeded exiting...")
 
 			return nil
 		}

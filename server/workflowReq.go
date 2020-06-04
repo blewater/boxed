@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/tradeline-tech/workflow/datastore"
 	"github.com/tradeline-tech/workflow/pkg/config"
+	"github.com/tradeline-tech/workflow/pkg/log"
 	"github.com/tradeline-tech/workflow/types"
 	"github.com/tradeline-tech/workflow/wrpc"
 )
@@ -79,7 +79,7 @@ func (req *WorkflowServerReq) initWorkflow(
 			// workflows don't match:
 			// log it and then create a new one in the DB as we assume
 			// that the correct workflow is the one declared in code.
-			fmt.Println(
+			log.Println(
 				"mongo database workflow mismatch, creating new workflow from taskRunners definitions",
 				memoryDbCheckError)
 		}
@@ -93,7 +93,7 @@ func (req *WorkflowServerReq) initWorkflow(
 	// Initializing a workflow without any prior task execution
 	foundWorkflow, err = types.NewWorkflow(req.cfg, req.messenger, req.workflowNameKey, srv.TaskRunners)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 
 	// Cache the created workflow
@@ -219,7 +219,7 @@ func (req *WorkflowServerReq) stepRunServerSideTasks(ctx context.Context, remote
 	errIn := req.workflow.Run(ctx)
 
 	if err := req.handleAnyServerOrRemoteErr(errIn, remoteMsg); err != nil {
-		fmt.Println(err, ", workflow task running error")
+		log.Println(err, ", workflow task running error")
 
 		return err
 	}
@@ -240,7 +240,7 @@ func (req *WorkflowServerReq) stepSendRemoteTasks() reqAction {
 
 	err := req.messenger.SendRemoteTasksToRun(remoteTasksToExecute)
 	if err != nil {
-		fmt.Print(err, "sending remote task failed")
+		log.Print(err, "sending remote task failed")
 
 		return exitServer
 	}
@@ -252,7 +252,7 @@ func (req *WorkflowServerReq) stepSendRemoteTasks() reqAction {
 func (req *WorkflowServerReq) stepWorkflowCompleted(ctx context.Context) reqAction {
 	if req.workflow.SetWorkflowCompletedChecked(ctx) {
 		if err := req.messenger.SignalSrvWorkflowCompletion(req.workflow.GetLen()); err != nil {
-			fmt.Println(err, "sending workflow completion messaging error")
+			log.Println(err, "sending workflow completion messaging error")
 
 			return exitServer
 		}
@@ -287,7 +287,7 @@ func (req *WorkflowServerReq) handleAnyServerOrRemoteErr(lastServerTaskError err
 	clientErrMsg := remoteMsg.ErrorMsg
 	if clientErrMsg != "" {
 		clientErr := errors.New(clientErrMsg)
-		fmt.Println(clientErr, "received client error")
+		log.Println(clientErr, "received client error")
 
 		return clientErr
 	}

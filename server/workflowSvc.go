@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -16,6 +15,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/tradeline-tech/workflow/datastore"
+	"github.com/tradeline-tech/workflow/pkg/log"
 	"github.com/tradeline-tech/workflow/types"
 	"github.com/tradeline-tech/workflow/wrpc"
 )
@@ -290,7 +290,7 @@ func SetupSigTermCloseHandler(srv *grpc.Server) {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		fmt.Println("\r- Ctrl+C pressed in Terminal")
+		log.Println("Ctrl+C pressed in Terminal")
 		GracefulShutdown(srv)
 		os.Exit(0)
 	}()

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/tradeline-tech/workflow/pkg/log"
 	"github.com/tradeline-tech/workflow/remote"
 	"github.com/tradeline-tech/workflow/types"
 )
@@ -8,6 +9,9 @@ import (
 const workflowName = "dh-secret"
 
 func main() {
+	// Sssss it's secret
+	log.DiscardLog()
+
 	if err := remote.StartWorkflow(
 		workflowName,
 		"127.0.0.1",

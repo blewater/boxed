@@ -3,7 +3,8 @@ package wrpc
 import (
 	"errors"
 	"fmt"
-	"log"
+
+	"github.com/tradeline-tech/workflow/pkg/log"
 )
 
 //
@@ -26,13 +27,13 @@ func NewRemoteMessenger(connToSrv TaskCommunicator_RunWorkflowClient) *RemoteMes
 // SendWorkflowNameKeyToSrv sends the org identifier to the server
 func (msg *RemoteMessenger) SendWorkflowNameKeyToSrv(workflowNameKey string) error {
 	if workflowNameKey == "" {
-		fmt.Println(remoteTextWorkflowNameMissing)
+		log.Println(remoteTextWorkflowNameMissing)
 
 		return errors.New(errTextWorkflowKeyMissing)
 	}
 
 	if err := msg.ConnToSrv.Send(&RemoteMsg{WorkflowNameKey: workflowNameKey}); err != nil {
-		fmt.Println("error : ", err, ", failed to stream a remote gRPC message to server")
+		log.Println("error : ", err, ", failed to stream a remote gRPC message to server")
 
 		return err
 	}
@@ -49,7 +50,7 @@ func (msg *RemoteMessenger) SendTasksErrorMsgToServer(
 	errTaskExec error) error {
 
 	if workflowNameKey == "" {
-		fmt.Println(remoteTextWorkflowNameMissing)
+		log.Println(remoteTextWorkflowNameMissing)
 
 		return errors.New(errTextWorkflowKeyMissing)
 	}
@@ -74,7 +75,7 @@ func (msg *RemoteMessenger) SendTasksErrorMsgToServer(
 // the Server.
 func (msg *RemoteMessenger) SendTaskStatusToServer(workflowNameKey, taskStatusMsg string) error {
 	if workflowNameKey == "" {
-		fmt.Println(remoteTextWorkflowNameMissing)
+		log.Println(remoteTextWorkflowNameMissing)
 
 		return errors.New(errTextWorkflowKeyMissing)
 	}
@@ -96,7 +97,7 @@ func (msg *RemoteMessenger) SendTaskStatusToServer(workflowNameKey, taskStatusMs
 // element to the Server.
 func (msg *RemoteMessenger) SendDatumToServer(workflowNameKey, datum string) error {
 	if workflowNameKey == "" {
-		fmt.Println(remoteTextWorkflowNameMissing)
+		log.Println(remoteTextWorkflowNameMissing)
 
 		return errors.New(errTextWorkflowKeyMissing)
 	}
@@ -117,7 +118,7 @@ func (msg *RemoteMessenger) SendDatumToServer(workflowNameKey, datum string) err
 // elements to the Server.
 func (msg *RemoteMessenger) SendDataToServer(workflowNameKey string, data []string) error {
 	if workflowNameKey == "" {
-		fmt.Println(remoteTextWorkflowNameMissing)
+		log.Println(remoteTextWorkflowNameMissing)
 
 		return errors.New(errTextWorkflowKeyMissing)
 	}
@@ -137,13 +138,13 @@ func (msg *RemoteMessenger) SendDataToServer(workflowNameKey string, data []stri
 // SendTaskCompletionToServer sends tasks completion
 func (msg *RemoteMessenger) SendTaskCompletionToServer(workflowNameKey string, tasks []*RemoteMsg_Tasks) error {
 	if workflowNameKey == "" {
-		fmt.Println(remoteTextWorkflowNameMissing)
+		log.Println(remoteTextWorkflowNameMissing)
 
 		return errors.New(errTextWorkflowKeyMissing)
 	}
 
-	outMsg := fmt.Sprintf("signaling remoted completion for tasks: %v\n", tasks)
-	fmt.Println(outMsg)
+	outMsg := fmt.Sprintf("signaling remote completion for tasks: %v\n", tasks)
+	log.Println(outMsg)
 
 	errSend := msg.ConnToSrv.Send(&RemoteMsg{
 		WorkflowNameKey: workflowNameKey,

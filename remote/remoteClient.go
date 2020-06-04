@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"reflect"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/tradeline-tech/workflow/pkg/config"
+	"github.com/tradeline-tech/workflow/pkg/log"
 	"github.com/tradeline-tech/workflow/types"
 
 	"github.com/tradeline-tech/workflow/wrpc"
@@ -86,7 +86,7 @@ func (r *Remote) ProcessGRPCMessages() error {
 
 		// 4. Are we done?
 		if serverMsg.TaskInProgress == wrpc.ServerWorkflowCompletionText {
-			fmt.Println("Received workflow completion message. Exiting...")
+			log.Println("Received workflow completion message. Exiting...")
 			break
 		}
 
@@ -116,13 +116,13 @@ func recoverFromPanic() {
 func endRemoteToSrvConnection(remoteToSrvConn wrpc.TaskCommunicator_RunWorkflowClient) {
 	err := remoteToSrvConn.CloseSend()
 	if err != nil {
-		fmt.Println(err, "failed to close remote connection to the server")
+		log.Println(err, "failed to close remote connection to the server")
 	}
 }
 
 func (r *Remote) saveServerData(serverMsg *wrpc.ServerMsg) {
 	if serverMsg.TaskOutput != "" {
-		fmt.Println(serverMsg.TaskOutput)
+		log.Println(serverMsg.TaskOutput)
 	}
 	if serverMsg.Datum != "" {
 		r.cfg.Add("datum", serverMsg.Datum)
@@ -247,7 +247,7 @@ func (r *Remote) runReceivedTasks(messenger types.MsgToSrv, remoteTasks *types.T
 	for idx, taskRunner := range remoteTasks.TaskRunners {
 		msg := fmt.Sprintf("Initiating task %s...", taskRunner.GetTask().Name)
 
-		fmt.Println(msg)
+		log.Println(msg)
 
 		if err := messenger.SendTaskStatusToServer(r.workflowNameKeyValue, msg); err != nil {
 			log.Println("error : ", err, "failed to send task status message")
@@ -348,12 +348,13 @@ func StartWorkflow(
 
 	gRPCClient, tcpConn, err := connectToServerWithoutTLS(ctxRemoteTimeout, serverAddress, port)
 	if err != nil {
-		log.Fatalf("Could not connect to workflow server %s:%d\n", serverAddress, port)
+		log.ErrorLogf("Could not connect to workflow server %s:%d\n", serverAddress, port)
+		return err
 	}
 
 	defer tcpConn.Close()
 
-	var cfg types.TaskConfiguration = config.NewTasksBoostrapConfig()
+	var cfg types.TaskConfiguration = config.NewTasksBootstrapConfig()
 	cfg.Add(types.ConfigWorkflowKey, "dh-secret")
 
 	remote := New(
