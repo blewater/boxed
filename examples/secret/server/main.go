@@ -22,6 +22,8 @@ func main() {
 			types.RegisterRemoteTask("genGx"),
 			tasks.NewGenGy,
 			types.RegisterRemoteTask("genGyx"),
+			tasks.NewGenGxy,
+			types.RegisterRemoteTask("validate"),
 		}); err != nil {
 		panic("server launching error : " + err.Error())
 	}

@@ -2,8 +2,10 @@ package tasks
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/tradeline-tech/workflow/examples/secret"
+	"github.com/tradeline-tech/workflow/remote"
 	"github.com/tradeline-tech/workflow/types"
 	"github.com/tradeline-tech/workflow/wrpc"
 )
@@ -49,7 +51,7 @@ func (task *GenGyx) Do() error {
 		return err
 	}
 
-	gYX := secret.GetModOfPow(gY, x, p)
+	gyx := secret.GetModOfPow(gY, x, p)
 	var (
 		guess, hits int64
 	)
@@ -62,13 +64,13 @@ func (task *GenGyx) Do() error {
 
 		}
 		if err != nil {
-			fmt.Println("error : ", err, ", input expected to be a positive integer")
+			fmt.Println(err, ", input expected to be a positive integer")
 		}
-		if gYX == guess {
+		if gyx == guess {
 			hits++
 		}
 	}
-	fmt.Printf("The secret is --> %d\n", gYX)
+	fmt.Printf("The secret is --> %d\n", gyx)
 	switch hits {
 	case 0:
 		fmt.Println("Sorry better luck next time :)")
@@ -78,7 +80,13 @@ func (task *GenGyx) Do() error {
 		fmt.Println("Excellent job! Please share your coding solution to feature it on this site :)")
 	}
 
-	return nil
+	return remote.SendDataToServer(
+		secret.WorkflowNameKey,
+		[]string{
+			secret.GYtoX,
+			strconv.FormatInt(gyx, 10),
+		},
+		task.Config)
 }
 
 // Validate if task completed
@@ -87,6 +95,7 @@ func (task *GenGyx) Validate() error {
 	if !ok {
 		return secret.GetValueNotFoundErrFunc(secret.G)
 	}
+
 	_, ok = task.Config.Get(secret.X)
 	if !ok {
 		return secret.GetValueNotFoundErrFunc(secret.X)

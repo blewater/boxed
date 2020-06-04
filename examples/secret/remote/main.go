@@ -23,6 +23,7 @@ func main() {
 			 */
 			tasks.NewGenGx,
 			tasks.NewGenGyx,
+			tasks.NewValidate,
 		}); err != nil {
 		panic(err)
 	}
