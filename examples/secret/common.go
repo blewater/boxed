@@ -67,7 +67,7 @@ func GetValue(config types.TaskConfiguration, key string) (int64, error) {
 		return 0, fmt.Errorf("%v of type %T", interfaceVal, interfaceVal)
 	}
 
-	if key != X {
+	if key != X && key != Y && key != GXtoY && key != GYtoX {
 		fmt.Printf("\thint: %s : %d\n", key, int64Val)
 	}
 
