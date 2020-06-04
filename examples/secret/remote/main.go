@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/tradeline-tech/workflow/examples/secret/tasks"
 	"github.com/tradeline-tech/workflow/pkg/log"
 	"github.com/tradeline-tech/workflow/remote"
 	"github.com/tradeline-tech/workflow/types"
@@ -20,8 +21,8 @@ func main() {
 			/*
 			 * Set Remote Tasks here
 			 */
-			NewGenGx,
-			NewGenGyx,
+			tasks.NewGenGx,
+			tasks.NewGenGyx,
 		}); err != nil {
 		panic(err)
 	}

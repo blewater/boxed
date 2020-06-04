@@ -1,24 +1,23 @@
-package tasks
+package types
 
 import (
-	"github.com/tradeline-tech/workflow/types"
 	"github.com/tradeline-tech/workflow/wrpc"
 )
 
 // remoteGenericTaskForSrv is a placeholder of remotely executed tasks for
 // registering custom remote task names within the server workflow with a name.
 type remoteGenericTaskForSrv struct {
-	Config types.TaskConfiguration
-	Task   *types.TaskType
+	Config TaskConfiguration
+	Task   *TaskType
 }
 
-// NewGetWorkflowName returns a new task runner func to register a remote
+// RegisterRemoteTask returns a new task runner func to register a remote
 // workflow task for the workflow
-func RemoteTask(remoteTaskName string) types.TaskRunnerNewFunc {
+func RegisterRemoteTask(remoteTaskName string) TaskRunnerNewFunc {
 
-	return func(config types.TaskConfiguration) types.TaskRunner {
+	return func(config TaskConfiguration) TaskRunner {
 		taskRunner := &remoteGenericTaskForSrv{
-			Task: &types.TaskType{
+			Task: &TaskType{
 				Name:     remoteTaskName,
 				IsServer: false,
 			},
@@ -41,7 +40,7 @@ func (t *remoteGenericTaskForSrv) Rollback() error { return nil }
 func (t *remoteGenericTaskForSrv) GetProp(key string) (interface{}, bool) { return t.Config.Get(key) }
 
 // GetTask returns the task of this runner
-func (t *remoteGenericTaskForSrv) GetTask() *types.TaskType { return t.Task }
+func (t *remoteGenericTaskForSrv) GetTask() *TaskType { return t.Task }
 
 // PostRemoteTasksCompletion performs any server workflow task work upon
 // completing the remote task work e.g., saving remote task configuration

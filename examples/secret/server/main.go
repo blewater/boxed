@@ -1,9 +1,10 @@
 package main
 
 import (
+	"github.com/tradeline-tech/workflow/examples/secret/tasks"
 	"github.com/tradeline-tech/workflow/pkg/log"
 	"github.com/tradeline-tech/workflow/server"
-	"github.com/tradeline-tech/workflow/server/tasks"
+	"github.com/tradeline-tech/workflow/types"
 )
 
 func main() {
@@ -18,9 +19,9 @@ func main() {
 			/*
 			 * Workflow tasks
 			 */
-			tasks.RemoteTask("genGx"),
-			NewGenGy,
-			tasks.RemoteTask("genGyx"),
+			types.RegisterRemoteTask("genGx"),
+			tasks.NewGenGy,
+			types.RegisterRemoteTask("genGyx"),
 		}); err != nil {
 		panic("server launching error : " + err.Error())
 	}
