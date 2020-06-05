@@ -104,7 +104,7 @@ func (srv *WorkflowsServer) RunWorkflow(gRPCConnToRemote wrpc.TaskCommunicator_R
 			break
 		}
 
-		if nextAction := req.process(ctx, gRPCConnToRemote, remoteMsq); nextAction == waitNextRequest {
+		if nextAction := req.process(ctx, remoteMsq); nextAction == waitNextRequest {
 			continue
 		} else if nextAction == exitServer {
 			break

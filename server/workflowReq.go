@@ -29,8 +29,7 @@ func NewWorkflowReq(srv *WorkflowsServer, gRPCConnToRemote wrpc.TaskCommunicator
 	}
 }
 
-func (req *WorkflowServerReq) process(
-	ctx context.Context, messenger wrpc.TaskCommunicator_RunWorkflowServer, msg *wrpc.RemoteMsg) reqAction {
+func (req *WorkflowServerReq) process(ctx context.Context, msg *wrpc.RemoteMsg) reqAction {
 	var err error
 
 	loopAction := req.stepProcessReceivedMessages(ctx, msg)
