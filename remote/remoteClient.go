@@ -115,7 +115,6 @@ func recoverFromPanic(errRef *error) {
 			return
 		}
 	}
-	// likely called without defer...panic
 }
 
 func endRemoteToSrvConnection(remoteToSrvConn wrpc.TaskCommunicator_RunWorkflowClient) {

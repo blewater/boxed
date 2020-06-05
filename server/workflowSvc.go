@@ -63,9 +63,12 @@ type WorkflowsServer struct {
 	TaskRunners     []types.TaskRunnerNewFunc
 }
 
-func recoverFromPanic() {
+func recoverFromPanic(errRef *error) {
 	if r := recover(); r != nil {
-		log.Println("recover: ", r)
+		err, ok := r.(error)
+		if ok {
+			*errRef = err
+		}
 	}
 }
 
@@ -87,8 +90,8 @@ func NewWorkflowsServer(server *grpc.Server, soloWorkflow bool, srvTaskRunners S
 
 // RunTasks opens a bidirectional stream to a remote client and
 // runs tasks with workflow name-key received from the remote gRPC client.
-func (srv *WorkflowsServer) RunWorkflow(gRPCConnToRemote wrpc.TaskCommunicator_RunWorkflowServer) error {
-	defer recoverFromPanic()
+func (srv *WorkflowsServer) RunWorkflow(gRPCConnToRemote wrpc.TaskCommunicator_RunWorkflowServer) (err error) {
+	defer recoverFromPanic(&err)
 
 	ctx := gRPCConnToRemote.Context()
 
@@ -107,8 +110,6 @@ func (srv *WorkflowsServer) RunWorkflow(gRPCConnToRemote wrpc.TaskCommunicator_R
 			break
 		}
 	}
-
-	defer req.safeSaveWorkflow()
 
 	srv.soloModeTerminate()
 

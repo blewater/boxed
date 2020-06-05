@@ -38,6 +38,8 @@ func (req *WorkflowServerReq) process(
 		return loopAction
 	}
 
+	defer req.safeSaveWorkflow()
+
 	if err = req.stepRunServerSideTasks(ctx, msg); err != nil {
 		return exitServer
 	}
