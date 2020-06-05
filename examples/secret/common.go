@@ -2,8 +2,6 @@ package secret
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/tradeline-tech/workflow/types"
 )
@@ -41,30 +39,10 @@ func IsSame(gyx, gxy int64) bool {
 	return gyx == gxy
 }
 
-func GetValueNotFoundErrFunc(v string) error {
-	return fmt.Errorf("%s not found within configuration", strings.TrimSpace(v))
-}
-
-func GetValue(config types.TaskConfiguration, key string) (int64, error) {
-	interfaceVal, ok := config.Get(key)
-	if !ok {
-		return 0, GetValueNotFoundErrFunc(key)
-	}
-
-	var int64Val int64
-	switch v := interfaceVal.(type) {
-	case int64:
-		int64Val = v
-	case int:
-		int64Val = int64(v)
-	case string:
-		intVal, err := strconv.Atoi(v)
-		if err != nil {
-			return 0, err
-		}
-		int64Val = int64(intVal)
-	default:
-		return 0, fmt.Errorf("%v of type %T", interfaceVal, interfaceVal)
+func GetValue(cfg types.TaskConfiguration, key string) (int64, error) {
+	int64Val, err := cfg.GetInt64(key)
+	if err != nil {
+		return 0, err
 	}
 
 	if key != X && key != Y && key != GXtoY && key != GYtoX {

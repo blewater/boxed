@@ -49,8 +49,8 @@ func New(
 }
 
 // ProcessGRPCMessages Enters the remote messaging processing loop
-func (r *Remote) ProcessGRPCMessages() error {
-	defer recoverFromPanic()
+func (r *Remote) ProcessGRPCMessages() (err error) {
+	defer recoverFromPanic(&err)
 
 	// Connect with streaming connection to the server
 	gRPCRemoteConnToSrv, err := r.gRPCRemote.RunWorkflow(r.ctx)
@@ -107,10 +107,15 @@ func (r *Remote) getRemoteMessenger(gRPCRemoteConnToSrv wrpc.TaskCommunicator_Ru
 	return messenger
 }
 
-func recoverFromPanic() {
+func recoverFromPanic(errRef *error) {
 	if r := recover(); r != nil {
-		// TODO logger.Debug(context.Background(), "recover:", r)
+		err, ok := r.(error)
+		if ok {
+			*errRef = err
+			return
+		}
 	}
+	// likely called without defer...panic
 }
 
 func endRemoteToSrvConnection(remoteToSrvConn wrpc.TaskCommunicator_RunWorkflowClient) {

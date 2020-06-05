@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/tradeline-tech/workflow/examples/secret"
+	"github.com/tradeline-tech/workflow/pkg/config"
 	"github.com/tradeline-tech/workflow/remote"
 	"github.com/tradeline-tech/workflow/types"
 	"github.com/tradeline-tech/workflow/wrpc"
@@ -113,17 +114,17 @@ func displayGuessRes(gyx int64, hits int64) {
 func (task *genGyx) Validate() error {
 	_, ok := task.Config.Get(secret.G)
 	if !ok {
-		return secret.GetValueNotFoundErrFunc(secret.G)
+		return config.GetValueNotFoundErrFunc(secret.G)
 	}
 
 	_, ok = task.Config.Get(secret.X)
 	if !ok {
-		return secret.GetValueNotFoundErrFunc(secret.X)
+		return config.GetValueNotFoundErrFunc(secret.X)
 	}
 
 	_, ok = task.Config.Get(secret.GtoY)
 	if !ok {
-		return secret.GetValueNotFoundErrFunc(secret.GtoY)
+		return config.GetValueNotFoundErrFunc(secret.GtoY)
 	}
 
 	return nil

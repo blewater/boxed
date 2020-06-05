@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/tradeline-tech/workflow/examples/secret"
+	"github.com/tradeline-tech/workflow/pkg/config"
 	"github.com/tradeline-tech/workflow/remote"
 	"github.com/tradeline-tech/workflow/types"
 	"github.com/tradeline-tech/workflow/wrpc"
@@ -107,7 +108,7 @@ func printIntro() {
 func (task *genGx) Validate() error {
 	_, ok := task.Config.Get(secret.X)
 	if !ok {
-		return secret.GetValueNotFoundErrFunc(secret.X)
+		return config.GetValueNotFoundErrFunc(secret.X)
 	}
 
 	return nil

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/tradeline-tech/workflow/examples/secret"
+	"github.com/tradeline-tech/workflow/pkg/config"
 	"github.com/tradeline-tech/workflow/types"
 	"github.com/tradeline-tech/workflow/wrpc"
 )
@@ -62,12 +63,12 @@ func (task *confirm) Do() error {
 func (task *confirm) Validate() error {
 	_, ok := task.Config.Get(secret.GXtoY)
 	if !ok {
-		return secret.GetValueNotFoundErrFunc(secret.GtoX)
+		return config.GetValueNotFoundErrFunc(secret.GtoX)
 	}
 
 	_, ok = task.Config.Get(secret.GYtoX)
 	if !ok {
-		return secret.GetValueNotFoundErrFunc(secret.GYtoX)
+		return config.GetValueNotFoundErrFunc(secret.GYtoX)
 	}
 
 	return nil

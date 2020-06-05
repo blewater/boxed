@@ -23,6 +23,7 @@ type MsgToRemote interface {
 type TaskConfiguration interface {
 	Add(key string, value interface{})
 	Get(key string) (interface{}, bool)
+	GetInt64(key string) (int64, error)
 }
 
 type MsgToSrv interface {
