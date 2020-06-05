@@ -34,8 +34,8 @@ type TaskRunner interface {
 type TaskRunnerNewFunc = func(cfg TaskConfiguration) TaskRunner
 type TaskRunners = []TaskRunnerNewFunc
 
-// Tasks is the model for the network workflow collection of tasks.
-type Tasks struct {
+// Workflow is the model for the network workflow collection of tasks.
+type Workflow struct {
 
 	// Persisted in mongo
 	ID                     primitive.ObjectID `bson:"_id" json:"_id"`     // Unique managed automatically by mongo driver
@@ -59,7 +59,7 @@ func NewWorkflow(
 	cfg TaskConfiguration,
 	srvMessenger MsgToRemote,
 	workflowName string,
-	tasksRunners TaskRunners) (*Tasks, error) {
+	tasksRunners TaskRunners) (*Workflow, error) {
 	if workflowName == "" {
 		return nil, errors.New("empty workflow workflowName is not allowed")
 	}
@@ -75,7 +75,7 @@ func NewWorkflow(
 		workflowTasks = append(workflowTasks, newTask)
 	}
 
-	return &Tasks{
+	return &Workflow{
 		ID:                     primitive.NilObjectID,
 		Name:                   workflowName,
 		Tasks:                  workflowTasks,
@@ -87,11 +87,11 @@ func NewWorkflow(
 }
 
 // DBDocument interface methods
-func (workflow *Tasks) GetID() interface{} {
+func (workflow *Workflow) GetID() interface{} {
 	return workflow.ID
 }
 
-func (workflow *Tasks) SetID(id string) error {
+func (workflow *Workflow) SetID(id string) error {
 
 	mongoID, err := primitive.ObjectIDFromHex(id)
 	if err == nil {
@@ -101,21 +101,21 @@ func (workflow *Tasks) SetID(id string) error {
 	return err
 }
 
-func (workflow *Tasks) SetCreatedAt(createdAt time.Time) {
+func (workflow *Workflow) SetCreatedAt(createdAt time.Time) {
 	workflow.CreatedAt = createdAt
 }
 
-func (workflow *Tasks) SetUpdatedAt(updatedAt time.Time) {
+func (workflow *Workflow) SetUpdatedAt(updatedAt time.Time) {
 	workflow.UpdatedAt = updatedAt
 }
 
 // GetLen returns the workflow length of contained tasks
-func (workflow *Tasks) GetLen() int {
+func (workflow *Workflow) GetLen() int {
 	return len(workflow.Tasks)
 }
 
 // GetPendingRemoteTaskNames returns the task names due for execution
-func (workflow *Tasks) GetPendingRemoteTaskNames() []string {
+func (workflow *Workflow) GetPendingRemoteTaskNames() []string {
 	remoteTaskNames := make([]string, 0, 2)
 
 	if workflow == nil || len(workflow.Tasks) == 0 {
@@ -136,7 +136,7 @@ func (workflow *Tasks) GetPendingRemoteTaskNames() []string {
 }
 
 // InitTasksMemState updates an existing workflow with the task runners that can be created only in memory
-func (workflow *Tasks) InitTasksMemState(config TaskConfiguration,
+func (workflow *Workflow) InitTasksMemState(config TaskConfiguration,
 	tasksRunnerNewFunc []TaskRunnerNewFunc) error {
 	if len(tasksRunnerNewFunc) != len(workflow.Tasks) {
 		return fmt.Errorf(`error workflow tasks length: %d != task runners length: %d\n
@@ -168,7 +168,7 @@ func (workflow *Tasks) InitTasksMemState(config TaskConfiguration,
 
 // Run is the workflow runner for server tasks;
 // interrupts execution for Remote tasks
-func (workflow *Tasks) Run(ctx context.Context) (execErr error) {
+func (workflow *Workflow) Run(ctx context.Context) (execErr error) {
 	if workflow.SetWorkflowCompletedChecked(ctx) {
 		return nil
 	}
@@ -178,7 +178,7 @@ func (workflow *Tasks) Run(ctx context.Context) (execErr error) {
 }
 
 // SendTaskUpdateToRemote streams a server task text update on progress or error to the remote client
-func (workflow *Tasks) SendTaskUpdateToRemote(taskIndex int, msgText string, errIn error) error {
+func (workflow *Workflow) SendTaskUpdateToRemote(taskIndex int, msgText string, errIn error) error {
 	if taskIndex < 0 || taskIndex >= len(workflow.Tasks) {
 		return nil
 	}
@@ -189,7 +189,7 @@ func (workflow *Tasks) SendTaskUpdateToRemote(taskIndex int, msgText string, err
 	return workflow.srvMessenger.SendServerTaskProgressToRemote(taskName, msgText, errIn)
 }
 
-func (workflow *Tasks) doRemainingTasks(ctx context.Context) error {
+func (workflow *Workflow) doRemainingTasks(ctx context.Context) error {
 	var messagingErr error
 	i := workflow.LastTaskIndexCompleted + 1
 
@@ -227,7 +227,7 @@ func (workflow *Tasks) doRemainingTasks(ctx context.Context) error {
 }
 
 // SendRemoteTasks sends tasks that need to be executed remotely
-func (workflow *Tasks) SendRemoteTasksToRun() (sentRemoteTasks bool, err error) {
+func (workflow *Workflow) SendRemoteTasksToRun() (sentRemoteTasks bool, err error) {
 	if workflow.LastTaskIndexCompleted+1 >= workflow.GetLen() ||
 		workflow.Tasks[workflow.LastTaskIndexCompleted+1].IsServer {
 		return false, nil
@@ -264,7 +264,7 @@ func (workflow *Tasks) SendRemoteTasksToRun() (sentRemoteTasks bool, err error) 
 // till end of remote tasks length
 // -- or
 // first unsuccessful remote task
-func (workflow *Tasks) CopyRemoteTasksProgress(remoteMsg *wrpc.RemoteMsg) error {
+func (workflow *Workflow) CopyRemoteTasksProgress(remoteMsg *wrpc.RemoteMsg) error {
 	if remoteMsg.Tasks == nil || len(remoteMsg.Tasks) == 0 {
 		return errors.New("error nil cli tasks")
 	}
@@ -302,10 +302,10 @@ func (workflow *Tasks) CopyRemoteTasksProgress(remoteMsg *wrpc.RemoteMsg) error 
 	return nil
 }
 
-// Save Remote Tasks TasksConfig Results Here
+// Save Remote Workflow TasksConfig Results Here
 // Remote Task config answers -> workflow changes of the current tasks[LastIndexCompleted]
 // Checks if it's a Remote task and completed
-func (workflow *Tasks) saveRemoteConfigResults(remoteMsg *wrpc.RemoteMsg) {
+func (workflow *Workflow) saveRemoteConfigResults(remoteMsg *wrpc.RemoteMsg) {
 	cliTask := workflow.Tasks[workflow.LastTaskIndexCompleted]
 	if cliTask.Completed && !cliTask.IsServer {
 		cliTaskRunner := workflow.TaskRunners[workflow.LastTaskIndexCompleted]
@@ -315,7 +315,7 @@ func (workflow *Tasks) saveRemoteConfigResults(remoteMsg *wrpc.RemoteMsg) {
 
 // SetWorkflowCompletedChecked checks if the lastTaskIndexCompleted has progressed past
 // all the completed tasks and returns T/F whether the workflow has completed
-func (workflow *Tasks) SetWorkflowCompletedChecked(ctx context.Context) bool {
+func (workflow *Workflow) SetWorkflowCompletedChecked(ctx context.Context) bool {
 	if workflow.Completed {
 		return true
 	}
@@ -360,7 +360,7 @@ func GetTaskName() string {
 	return ""
 }
 
-func (workflow *Tasks) PrintTasks() {
+func (workflow *Workflow) PrintTasks() {
 	for _, task := range workflow.Tasks {
 		task.Print()
 	}

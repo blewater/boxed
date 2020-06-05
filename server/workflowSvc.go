@@ -20,7 +20,7 @@ import (
 	"github.com/tradeline-tech/workflow/wrpc"
 )
 
-type WorkflowsType map[string]*types.Tasks
+type WorkflowsType map[string]*types.Workflow
 type WorkflowsConfigType map[string]types.TaskConfiguration
 
 // SrvTaskRunners is the list of declared constructor tasks
@@ -168,7 +168,7 @@ func stepCheckIOError(ctx context.Context, remoteMsg *wrpc.RemoteMsg, err error)
 	return false
 }
 
-func (srv *WorkflowsServer) getMemCachedWorkflow(workflowNameKey string) (*types.Tasks, types.TaskConfiguration) {
+func (srv *WorkflowsServer) getMemCachedWorkflow(workflowNameKey string) (*types.Workflow, types.TaskConfiguration) {
 	if workflowNameKey == "" {
 		return nil, nil
 	}
@@ -183,7 +183,7 @@ func (srv *WorkflowsServer) getMemCachedWorkflow(workflowNameKey string) (*types
 }
 
 func (srv *WorkflowsServer) setMemCachedWorkflow(
-	workflowNameKey string, workflow *types.Tasks, cfg types.TaskConfiguration) {
+	workflowNameKey string, workflow *types.Workflow, cfg types.TaskConfiguration) {
 	if workflowNameKey == "" {
 		return
 	}
@@ -194,7 +194,7 @@ func (srv *WorkflowsServer) setMemCachedWorkflow(
 	srv.mu.Unlock()
 }
 
-func readWorkflowFromDB(ctx context.Context, workflowNameKey string) (*types.Tasks, error) {
+func readWorkflowFromDB(ctx context.Context, workflowNameKey string) (*types.Workflow, error) {
 	readDocument, err := datastore.LoadByName(ctx, workflowNameKey)
 	if err != nil {
 		return nil, err
@@ -206,7 +206,7 @@ func readWorkflowFromDB(ctx context.Context, workflowNameKey string) (*types.Tas
 	}
 
 	// type assert that the read document is a tasks type collection
-	foundWorkflow, okWorkflow := readDocument.(*types.Tasks)
+	foundWorkflow, okWorkflow := readDocument.(*types.Workflow)
 	if !okWorkflow {
 		return nil, errors.New("failed to convert read document to a workflow")
 	}

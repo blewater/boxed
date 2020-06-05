@@ -245,7 +245,7 @@ func (r *Remote) chkTaskExists(messenger types.MsgToSrv, taskIdx int, remoteTask
 
 // runReceivedTasks runs the requested remoteTasks and sends the combined
 // success status or number of successful tasks + last failed task with error.
-func (r *Remote) runReceivedTasks(messenger types.MsgToSrv, remoteTasks *types.Tasks) error {
+func (r *Remote) runReceivedTasks(messenger types.MsgToSrv, remoteTasks *types.Workflow) error {
 	remoteMsgTasks := make([]*wrpc.RemoteMsg_Tasks, 0, len(remoteTasks.TaskRunners))
 
 	for idx, taskRunner := range remoteTasks.TaskRunners {
