@@ -8,19 +8,19 @@ import (
 )
 
 func ErrorLogf(format string, v ...interface{}) {
-	errorLog.Fatalf(format, v)
+	errorLog.Fatalf(format, v...)
 }
 
 func Print(v ...interface{}) {
-	infoLog.Print(v)
+	infoLog.Print(v...)
 }
 
 func Printf(format string, v ...interface{}) {
-	infoLog.Printf(format, v)
+	infoLog.Printf(format, v...)
 }
 
 func Println(v ...interface{}) {
-	infoLog.Println(v)
+	infoLog.Println(v...)
 }
 
 var (
