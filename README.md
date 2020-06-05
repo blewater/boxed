@@ -4,7 +4,18 @@ Run your distributed tasks fluently over gRPC asynchronous streaming goodness.
 
 ## Why?
 Because running asynchronous distributed activities as a cohesive linear workflow is hard.
- 
+
+## Features
+* Simple linear metaphor to define your _distributed_ tasks *sequentially*.
+
+* Live, cross-task declarative messaging, and configuration updates.
+
+* Monitor your remote tasks' progress centrally.
+
+* Because hiccups happen, resume your workflow activities where you left off.
+
+* _where the rubber hit the road_, tech borne-out from demanding network deployment conditions.
+
 ## Use Cases
 * Distributed Docker, K8s deployments.
 
@@ -17,31 +28,18 @@ Because running asynchronous distributed activities as a cohesive linear workflo
 * Any loosely-coupled server to remote activities.
 
 ## Examples
-* _~~Guess~~_[Hack the shared (Diffie-Hellman) secret.](https://github.com/tradeline-tech/workflow/tree/development/examples/secret) (crack the secret with your add-on, and we will feature your solution).
+* _~Guess~_[Hack the shared (Diffie-Hellman) secret.](https://github.com/tradeline-tech/workflow/tree/development/examples/secret) (_crack the secret exchanging algorithm with your coding add-on, and we will feature your solution_).
 
-* Distributed K8s deployment.
+* Distributed Containers deployment.
 
 * Remote Tic-tac-toe play.
-
-## Features
-* Dynamic task configuration bootstrapping.
-
-* Monitor Your remote task hiccups centrally.
-
-* Resume your workflow activities instantly, where you left off.
-
-* Run your distributed tasks linearly as you declare them.
-
-* Instant usage that scales to your workflow needs.
-
-* _where the rubber hit the road_, tech borne-out from demanding distributed deployment conditions.
 
 ## Steps to create a workflow
 1. Declare your tasks _sequentially_.
 
-2. Start the gRPC server,
+  _Optionally, declare a Mongo connection._
 
-    Optionally, declare a Mongo connection.
+2. Start the gRPC server,
 
 3. Start your remote client to **run** your workflow :)
 
