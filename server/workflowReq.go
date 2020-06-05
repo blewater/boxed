@@ -33,7 +33,7 @@ func (req *WorkflowServerReq) process(
 	ctx context.Context, messenger wrpc.TaskCommunicator_RunWorkflowServer, msg *wrpc.RemoteMsg) reqAction {
 	var err error
 
-	loopAction := req.stepProcessReceivedMessages(ctx, messenger, msg)
+	loopAction := req.stepProcessReceivedMessages(ctx, msg)
 	if loopAction == exitServer || loopAction == waitNextRequest {
 		return loopAction
 	}
@@ -118,12 +118,9 @@ func (req *WorkflowServerReq) setWorkflowByName(ctx context.Context, workflowNam
 	return continueProcessing
 }
 
-// stepProcessReceivedMessages performs step 2: gets or creates a workflow for
-// the requested key. Logs any remote task progress. Save any received information.
-func (req *WorkflowServerReq) stepProcessReceivedMessages(
-	ctx context.Context, messenger wrpc.TaskCommunicator_RunWorkflowServer, remoteMsg *wrpc.RemoteMsg) reqAction {
-	req.setWorkflowByName(ctx, remoteMsg.WorkflowNameKey)
-
+// stepProcessReceivedMessages gets or creates a workflow for the requested
+// key. Logs any remote task progress. Saves any received information.
+func (req *WorkflowServerReq) stepProcessReceivedMessages(ctx context.Context, remoteMsg *wrpc.RemoteMsg) reqAction {
 	if nextAction := req.setWorkflowByName(ctx, remoteMsg.WorkflowNameKey); nextAction != continueProcessing {
 		return nextAction
 	}
