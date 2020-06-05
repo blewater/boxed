@@ -110,6 +110,7 @@ func (srv *WorkflowsServer) RunWorkflow(gRPCConnToRemote wrpc.TaskCommunicator_R
 			break
 		}
 	}
+	req.workflow.Display()
 
 	srv.soloModeTerminate()
 

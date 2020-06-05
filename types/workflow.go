@@ -207,6 +207,8 @@ func (workflow *Workflow) doRemainingTasks(ctx context.Context) error {
 		err := ValidDo(nextTaskRunner)
 		workflow.Tasks[i] = nextTaskRunner.GetTask()
 
+		workflow.Display()
+
 		if err != nil {
 			return err
 		}

@@ -37,6 +37,8 @@ func (req *WorkflowServerReq) process(ctx context.Context, msg *wrpc.RemoteMsg) 
 		return loopAction
 	}
 
+	req.workflow.Display()
+
 	defer req.safeSaveWorkflow()
 
 	if err = req.stepRunServerSideTasks(ctx, msg); err != nil {
@@ -249,6 +251,7 @@ func (req *WorkflowServerReq) stepSendRemoteTasks() reqAction {
 // stepWorkflowCompleted checks whether the workflow has completed.
 func (req *WorkflowServerReq) stepWorkflowCompleted(ctx context.Context) reqAction {
 	if req.workflow.SetWorkflowCompletedChecked(ctx) {
+
 		if err := req.messenger.SignalSrvWorkflowCompletion(req.workflow.GetLen()); err != nil {
 			log.Println(err, "sending workflow completion messaging error")
 
