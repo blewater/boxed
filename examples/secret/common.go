@@ -45,9 +45,9 @@ func GetValue(cfg types.TaskConfiguration, key string) (int64, error) {
 		return 0, err
 	}
 
-	if key != X && key != Y && key != GXtoY && key != GYtoX {
-		fmt.Printf("\thint: %s : %d\n", key, int64Val)
-	}
+	// if key != X && key != Y && key != GXtoY && key != GYtoX {
+	// 	fmt.Printf("\thint: %s : %d\n", key, int64Val)
+	// }
 
 	return int64Val, nil
 }
