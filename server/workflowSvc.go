@@ -266,7 +266,7 @@ func StartUp(soloWorkflow bool, srvAddress string, srvPort int, serverTaskRunner
 		log.Println(err, "failed to start Workflow server")
 	}
 
-	return nil
+	return err
 }
 
 // GracefulShutdown handles the server shutdown process after receiving a signal
