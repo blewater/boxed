@@ -1,12 +1,14 @@
 # _remote_ workflows
 
-Run your distributed tasks fluently over gRPC asynchronous streaming goodness.
+Run your distributed tasks fluently over gRPC asynchronous streaming goodness. :traffic_light:
+
+![Workflow run gif](./workflow.gif)
 
 ## Why?
 Because running asynchronous distributed activities as a cohesive linear workflow is hard.
 
 ## Features
-* Simple linear metaphor to define your _distributed_ tasks *sequentially*.
+* Define your _distributed_ tasks *sequentially* running 100% pure undomesticated Go.
 
 * Live, cross-task declarative messaging, and configuration updates.
 
