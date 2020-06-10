@@ -5,11 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/alexeyco/simpletable"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
+	"github.com/tradeline-tech/workflow/ascii"
 	"github.com/tradeline-tech/workflow/datastore"
 	"github.com/tradeline-tech/workflow/pkg/log"
 	"github.com/tradeline-tech/workflow/wrpc"
@@ -352,5 +355,43 @@ func GetTaskName() string {
 func (workflow *Workflow) PrintTasks() {
 	for _, task := range workflow.Tasks {
 		task.Print()
+	}
+}
+
+// Display the workflow state in color ascii.
+func (workflow *Workflow) Display() {
+	var style = simpletable.StyleRounded
+
+	tree := simpletable.New()
+	tree.SetStyle(style)
+
+	fmt.Println()
+	for idx, task := range workflow.Tasks {
+
+		tree.Header = &simpletable.Header{
+			Cells: []*simpletable.Cell{
+				{Align: simpletable.AlignCenter, Text: "Task " + strconv.Itoa(idx+1)},
+				{Align: simpletable.AlignCenter, Text: "Workflow " + ascii.Blue(workflow.Name)},
+				{Align: simpletable.AlignCenter, Text: "Task Type"},
+			},
+		}
+
+		tree.Body = &simpletable.Body{
+			Cells: [][]*simpletable.Cell{
+				{
+					&simpletable.Cell{Text: "Name: " + ascii.Blue(task.Name)},
+					&simpletable.Cell{Text: task.DisplayStatus()},
+					&simpletable.Cell{Text: task.DisplayType()},
+				},
+			},
+		}
+
+		tree.Footer = &simpletable.Footer{
+			Cells: []*simpletable.Cell{
+				{Align: simpletable.AlignCenter, Span: 3, Text: ascii.Red(task.Log)},
+			},
+		}
+
+		tree.Println()
 	}
 }
