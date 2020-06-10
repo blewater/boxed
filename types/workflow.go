@@ -40,24 +40,25 @@ type TaskRunners = []TaskRunnerNewFunc
 // Workflow is the model for the network workflow collection of tasks.
 type Workflow struct {
 
-	// Persisted in mongo
-	ID                     primitive.ObjectID `bson:"_id" json:"_id"`     // Unique managed automatically by mongo driver
-	Name                   string             `bson:"name" json:"name"`   // Unique user provided workflow Id, and employed as key within server workflows map.
-	Tasks                  []*TaskType        `bson:"tasks" json:"tasks"` // Task names persisted in mongo
-	TasksConfig            TaskConfiguration  `bson:"tasksConfig" json:"tasksConfig"`
-	LastTaskIndexCompleted int                `bson:"lastTaskIndexCompleted" json:"lastTaskIndexCompleted"`
-	LastTaskNameCompleted  string             `bson:"lastTaskNameCompleted" json:"lastTaskNameCompleted"`
-	Completed              bool               `bson:"completed" json:"completed"`
-	CompletedAt            time.Time          `bson:"completedAt" json:"completedAt"`
-	CreatedAt              time.Time          `bson:"createdAt" json:"createdAt"`
-	UpdatedAt              time.Time          `bson:"updatedAt" json:"updatedAt"`
+	// Persisted unique managed automatically by mongo driver
+	ID primitive.ObjectID `bson:"_id" json:"_id"`
+	// Unique user provided workflow Id, and employed as key within server workflows map.
+	Name                   string            `bson:"name" json:"name"`
+	Tasks                  []*TaskType       `bson:"tasks" json:"tasks"`
+	TasksConfig            TaskConfiguration `bson:"tasksConfig" json:"tasksConfig"`
+	LastTaskIndexCompleted int               `bson:"lastTaskIndexCompleted" json:"lastTaskIndexCompleted"`
+	LastTaskNameCompleted  string            `bson:"lastTaskNameCompleted" json:"lastTaskNameCompleted"`
+	Completed              bool              `bson:"completed" json:"completed"`
+	CompletedAt            time.Time         `bson:"completedAt" json:"completedAt"`
+	CreatedAt              time.Time         `bson:"createdAt" json:"createdAt"`
+	UpdatedAt              time.Time         `bson:"updatedAt" json:"updatedAt"`
 
 	// Memory transient interfaces
 	TaskRunners  []TaskRunner `bson:"-"`
 	srvMessenger MsgToRemote  `bson:"-"`
 }
 
-// NewWorkflow gets a new initialized workflow struct
+// NewWorkflow gets a new initialized workflow type instance. It is a collection of tasks.
 func NewWorkflow(
 	cfg TaskConfiguration,
 	srvMessenger MsgToRemote,
@@ -112,12 +113,12 @@ func (workflow *Workflow) SetUpdatedAt(updatedAt time.Time) {
 	workflow.UpdatedAt = updatedAt
 }
 
-// GetLen returns the workflow length of contained tasks
+// GetLen returns the workflow length of contained tasks.
 func (workflow *Workflow) GetLen() int {
 	return len(workflow.Tasks)
 }
 
-// GetPendingRemoteTaskNames returns the task names due for execution
+// GetPendingRemoteTaskNames returns the task names due for execution.
 func (workflow *Workflow) GetPendingRemoteTaskNames() []string {
 	remoteTaskNames := make([]string, 0, 2)
 
@@ -138,7 +139,8 @@ func (workflow *Workflow) GetPendingRemoteTaskNames() []string {
 	return remoteTaskNames
 }
 
-// InitTasksMemState updates an existing workflow with the task runners that can be created only in memory
+// InitTasksMemState updates an existing workflow with the task runners that
+// can be created only in memory.
 func (workflow *Workflow) InitTasksMemState(config TaskConfiguration,
 	tasksRunnerNewFunc []TaskRunnerNewFunc) error {
 	if len(tasksRunnerNewFunc) != len(workflow.Tasks) {
@@ -180,7 +182,8 @@ func (workflow *Workflow) Run(ctx context.Context) (execErr error) {
 	return workflow.doRemainingTasks(ctx)
 }
 
-// SendTaskUpdateToRemote streams a server task text update on progress or error to the remote client
+// SendTaskUpdateToRemote streams a server task text update on progress or
+// error to the remote client.
 func (workflow *Workflow) SendTaskUpdateToRemote(taskIndex int, msgText string, errIn error) error {
 	if taskIndex < 0 || taskIndex >= len(workflow.Tasks) {
 		return nil
@@ -232,7 +235,7 @@ func (workflow *Workflow) doRemainingTasks(ctx context.Context) error {
 	return messagingErr
 }
 
-// SendRemoteTasks sends tasks that need to be executed remotely
+// SendRemoteTasks sends tasks that need to be executed remotely.
 func (workflow *Workflow) SendRemoteTasksToRun() (sentRemoteTasks bool, err error) {
 	if workflow.LastTaskIndexCompleted+1 >= workflow.GetLen() ||
 		workflow.Tasks[workflow.LastTaskIndexCompleted+1].IsServer {
@@ -265,11 +268,9 @@ func (workflow *Workflow) SendRemoteTasksToRun() (sentRemoteTasks bool, err erro
 }
 
 // CopyRemoteTasksProgress saves remote tasks feedback in the server workflow
-// and eventually to the data store.
-// Tt loops through received remote tasks and copies progress to server workflow
-// till end of remote tasks length
-// -- or
-// first unsuccessful remote task
+// and eventually to the data store. Tt loops through received remote tasks and
+// copies progress to server workflow till end of remote tasks length -- or
+// first unsuccessful remote task.
 func (workflow *Workflow) CopyRemoteTasksProgress(remoteMsg *wrpc.RemoteMsg) error {
 	if remoteMsg.Tasks == nil || len(remoteMsg.Tasks) == 0 {
 		return errors.New("error nil cli tasks")
@@ -306,7 +307,7 @@ func (workflow *Workflow) CopyRemoteTasksProgress(remoteMsg *wrpc.RemoteMsg) err
 }
 
 // SetWorkflowCompletedChecked checks if the lastTaskIndexCompleted has progressed past
-// all the completed tasks and returns T/F whether the workflow has completed
+// all the completed tasks and returns T/F whether the workflow has completed.
 func (workflow *Workflow) SetWorkflowCompletedChecked(ctx context.Context) bool {
 	if workflow.Completed {
 		return true
@@ -331,10 +332,10 @@ func (workflow *Workflow) SetWorkflowCompletedChecked(ctx context.Context) bool 
 }
 
 // GetTaskName gets the string function name for the current goroutine
-// executing func in stack frame (-1)
-// trimming path/package characters up to function name accounting that for first 3 characters
-// to discard "NewWorkflow" so xxx/workflow/NewInitCli becomes InitCli
-// Re: https://stackoverflow.com/questions/25927660/how-to-get-the-current-function-name
+// executing func in stack frame (-1) trimming path/package characters up to
+// function name accounting that for the first 3 characters to discard "New"
+// i.e., NewCalcX becomes CalcX. Ref:
+// stackoverflow.com/questions/25927660/how-to-get-the-current-function-name
 func GetTaskName() string {
 	pc, _, _, ok := runtime.Caller(1)
 	if !ok {

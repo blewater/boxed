@@ -4,16 +4,17 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/tradeline-tech/workflow/ascii"
 	"github.com/tradeline-tech/workflow/pkg/log"
 )
 
 // TaskType represents a unit of work that needs to happen on the server or client side
 type TaskType struct {
 	CompletedAt time.Time `bson:"completedAt" json:"completedAt"`
-	// index for internal tracking
-	Name     string `bson:"name" json:"name"`
-	Log      string `bson:"log" json:"log"`
-	IsServer bool   `bson:"isServer" json:"isServer"`
+	Name        string    `bson:"name" json:"name"`
+	Log         string    `bson:"log" json:"log"`
+	// Whether it is a server task or client.
+	IsServer bool `bson:"isServer" json:"isServer"`
 	// False: run Validate() first and only upon error, run Do(), Validate()
 	// True: run Do() first then Validate().
 	RunDoFirst bool `bson:"alwaysRun" json:"alwaysRun"`
