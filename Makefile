@@ -6,6 +6,10 @@ build:
 tidy:
 	go mod tidy
 
+# display intra-package 
+dep:
+	go list -f '{{ join .Imports "\n" }}' ./$(PKG) | grep 'github.com/tradeline-tech/workflow/'
+
 # Run linter
 lint:
 	golangci-lint run
