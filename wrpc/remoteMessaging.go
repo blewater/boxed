@@ -33,7 +33,7 @@ func (msg *RemoteMessenger) SendWorkflowNameKeyToSrv(workflowNameKey string) err
 	}
 
 	if err := msg.ConnToSrv.Send(&RemoteMsg{WorkflowNameKey: workflowNameKey}); err != nil {
-		log.Println(err, ", failed to stream a remote gRPC message to server")
+		log.ErrorLogLn(err, ", failed to stream a remote gRPC message to server")
 
 		return err
 	}
@@ -153,7 +153,7 @@ func (msg *RemoteMessenger) SendTaskCompletionToServer(workflowNameKey string, t
 	})
 
 	if errSend != nil {
-		log.Println(errSend, ", failed to signal completion of the remote tasks to the server")
+		log.ErrorLogLn(errSend, ", failed to signal completion of the remote tasks to the server")
 
 		return errSend
 	}

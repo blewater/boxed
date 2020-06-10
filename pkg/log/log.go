@@ -8,7 +8,23 @@ import (
 )
 
 func ErrorLogf(format string, v ...interface{}) {
-	errorLog.Fatalf(format, v...)
+	errorLog.Printf(format, v...)
+}
+
+func ErrorLog(v ...interface{}) {
+	errorLog.Print(v...)
+}
+
+func ErrorLogLn(v ...interface{}) {
+	errorLog.Println(v...)
+}
+
+func WarnLog(v ...interface{}) {
+	warnLog.Print(v...)
+}
+
+func DebugLog(v ...interface{}) {
+	debugLog.Print(v...)
 }
 
 func Print(v ...interface{}) {
@@ -24,7 +40,7 @@ func Println(v ...interface{}) {
 }
 
 var (
-	DebugLog *log.Logger
+	debugLog *log.Logger
 	infoLog  *log.Logger
 	warnLog  *log.Logger
 	errorLog *log.Logger
@@ -37,7 +53,7 @@ func InitLog(
 	errorWriter io.Writer) {
 
 	if debugWriter != nil {
-		DebugLog = log.New(debugWriter, "Debug: ", log.Ldate|log.Ltime|log.Lshortfile)
+		debugLog = log.New(debugWriter, "Debug: ", log.Ldate|log.Ltime|log.Lshortfile)
 	}
 
 	if infoWriter != nil {

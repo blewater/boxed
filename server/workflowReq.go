@@ -69,7 +69,7 @@ func (req *WorkflowServerReq) initWorkflow(
 	// 2nd Attempt to load workflow from the database
 	foundWorkflow, err = readWorkflowFromDB(ctx, req.workflowNameKey)
 	if err != nil {
-		log.Println(err, "while initializing workflow from the database")
+		log.ErrorLogLn(err, "while initializing workflow from the database")
 		return nil, nil
 	}
 
@@ -96,7 +96,7 @@ func (req *WorkflowServerReq) initWorkflow(
 	// Initializing a workflow without any prior task execution
 	foundWorkflow, err = types.NewWorkflow(req.cfg, req.messenger, req.workflowNameKey, srv.TaskRunners)
 	if err != nil {
-		log.Println(err)
+		log.ErrorLogLn(err)
 	}
 
 	// Cache the created workflow
@@ -188,7 +188,7 @@ func (req *WorkflowServerReq) saveRemoteTaskCompletion(
 	defer req.safeSaveWorkflow()
 
 	if err = req.workflow.CopyRemoteTasksProgress(remoteMsg); err != nil {
-		log.Println(err, ", server workflow state is invalid")
+		log.ErrorLogLn(err, ", server workflow state is invalid")
 
 		return tasksCompleted, err
 	}
@@ -219,7 +219,7 @@ func (req *WorkflowServerReq) stepRunServerSideTasks(ctx context.Context, remote
 	errIn := req.workflow.Run(ctx)
 
 	if err := req.handleAnyServerOrRemoteErr(errIn, remoteMsg); err != nil {
-		log.Println(err, ", workflow task running error")
+		log.ErrorLogLn(err, ", workflow task running error")
 
 		return err
 	}
@@ -253,7 +253,7 @@ func (req *WorkflowServerReq) stepWorkflowCompleted(ctx context.Context) reqActi
 	if req.workflow.SetWorkflowCompletedChecked(ctx) {
 
 		if err := req.messenger.SignalSrvWorkflowCompletion(req.workflow.GetLen()); err != nil {
-			log.Println(err, "sending workflow completion messaging error")
+			log.ErrorLogLn(err, "sending workflow completion messaging error")
 
 			return exitServer
 		}
@@ -284,11 +284,11 @@ func (req *WorkflowServerReq) handleAnyServerOrRemoteErr(lastServerTaskError err
 
 		return lastServerTaskError
 	}
-	// TODO is this needed?
+
 	clientErrMsg := remoteMsg.ErrorMsg
 	if clientErrMsg != "" {
 		clientErr := errors.New(clientErrMsg)
-		log.Println(clientErr, "received client error")
+		log.ErrorLogLn(clientErr, "received client error")
 
 		return clientErr
 	}
@@ -300,13 +300,13 @@ func (req *WorkflowServerReq) handleAnyServerOrRemoteErr(lastServerTaskError err
 // further execution for this request.
 func (req *WorkflowServerReq) printRemoteTaskError(remoteMsg *wrpc.RemoteMsg) reqAction {
 	if remoteMsg.ErrorMsg != "" {
-		log.Println(errors.New(remoteMsg.ErrorMsg),
+		log.ErrorLogLn(errors.New(remoteMsg.ErrorMsg),
 			"logger error while processing task:", remoteMsg.TaskInProgress)
 
-		log.Printf("Remote task %s erred: %s\n", remoteMsg.TaskInProgress, remoteMsg.ErrorMsg)
+		log.ErrorLogf("Remote task %s erred: %s\n", remoteMsg.TaskInProgress, remoteMsg.ErrorMsg)
 
 		if err := req.workflow.CopyRemoteTasksProgress(remoteMsg); err != nil {
-			log.Println(err, "while processing Remote messages")
+			log.ErrorLogLn(err, "while processing Remote messages")
 
 			return exitServer
 		}

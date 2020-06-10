@@ -6,6 +6,7 @@ import (
 
 	"github.com/tradeline-tech/workflow/examples/secret"
 	"github.com/tradeline-tech/workflow/pkg/config"
+	"github.com/tradeline-tech/workflow/pkg/log"
 	"github.com/tradeline-tech/workflow/remote"
 	"github.com/tradeline-tech/workflow/types"
 	"github.com/tradeline-tech/workflow/wrpc"
@@ -88,7 +89,7 @@ func askUserToGuessSecret(gyx int64) int64 {
 
 		}
 		if err != nil {
-			fmt.Println(err, ", input expected to be a positive integer")
+			log.ErrorLog(err, ", input expected to be a positive integer")
 		}
 		if gyx == guess {
 			hits++

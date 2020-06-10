@@ -147,7 +147,7 @@ func stepCheckIOError(ctx context.Context, remoteMsg *wrpc.RemoteMsg, err error)
 	}
 
 	if err != nil {
-		log.Println(err, ", server message reception error. Is the remote client still up?")
+		log.ErrorLogLn(err, ", server message reception error. Is the remote client still up?")
 
 		return true
 	}
@@ -159,7 +159,7 @@ func stepCheckIOError(ctx context.Context, remoteMsg *wrpc.RemoteMsg, err error)
 	}
 
 	if remoteMsg == nil {
-		log.Println(err, ", "+
+		log.ErrorLogLn(err, ", "+
 			"received nil remote message. Remote likely closed the connection.")
 
 		return true
@@ -263,7 +263,7 @@ func StartUp(soloWorkflow bool, srvAddress string, srvPort int, serverTaskRunner
 	log.Println("Workflow server starting...")
 
 	if err = gRpcServer.Serve(tcpListener); err != nil {
-		log.Println(err, "failed to start Workflow server")
+		log.ErrorLogLn(err, "failed to start Workflow server")
 	}
 
 	return err

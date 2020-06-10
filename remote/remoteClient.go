@@ -173,7 +173,7 @@ func (r *Remote) runRemoteWorkflow(messenger types.MsgToSrv, remoteTaskNames []s
 				return err
 			}
 			if err := r.runReceivedTasks(messenger, tasksToRun); err != nil {
-				log.Println(err, ", while running Remote tasks")
+				log.ErrorLogLn(err, ", while running Remote tasks")
 
 				return err
 			}
@@ -245,7 +245,7 @@ func (r *Remote) runReceivedTasks(messenger types.MsgToSrv, remoteTasks *types.W
 		log.Println(msg)
 
 		if err := messenger.SendTaskStatusToServer(r.workflowNameKeyValue, msg); err != nil {
-			log.Println(err, "failed to send task status message")
+			log.ErrorLogLn(err, "failed to send task status message")
 		}
 
 		if err := types.ValidDo(taskRunner); err != nil {
@@ -321,7 +321,7 @@ func connectToServerWithoutTLS(
 		grpc.WithBlock())
 
 	if err != nil {
-		log.Println(err)
+		log.ErrorLogLn(err)
 	}
 
 	gRPCRemote := wrpc.NewTaskCommunicatorClient(clientConn)

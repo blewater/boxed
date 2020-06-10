@@ -203,6 +203,7 @@ func (workflow *Workflow) doRemainingTasks(ctx context.Context) error {
 		messagingErr = workflow.SendTaskUpdateToRemote(i,
 			fmt.Sprintf("Running server task %s....", workflow.Tasks[i].Name),
 			nil)
+		log.ErrorLog(messagingErr)
 
 		err := ValidDo(nextTaskRunner)
 		workflow.Tasks[i] = nextTaskRunner.GetTask()
