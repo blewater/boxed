@@ -23,9 +23,9 @@ type DBDocument interface {
 }
 
 var (
-	dsURL, dsDatabase string
-	db                *mongo.Database
-	dbCollection      *mongo.Collection
+	dsDatabase   string
+	db           *mongo.Database
+	dbCollection *mongo.Collection
 )
 
 func GetDB() *mongo.Database {
@@ -37,7 +37,6 @@ func GetDBCollection() *mongo.Collection {
 }
 
 func NewDataStore(dbURL, dbDatabase, collectionName string) (*mongo.Database, error) {
-	dsURL = dbURL
 	dsDatabase = dbDatabase
 
 	var err error

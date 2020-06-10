@@ -48,7 +48,6 @@ type WorkflowsServer struct {
 	// gRPC state and Api
 	server *grpc.Server
 	wrpc.UnimplementedTaskCommunicatorServer
-	gRPCServer wrpc.TaskCommunicator_RunWorkflowServer
 
 	// Whether to run a single workflow and exit upon error or completion
 	soloWorkflowMode bool
@@ -176,8 +175,8 @@ func (srv *WorkflowsServer) getMemCachedWorkflow(workflowNameKey string) (*types
 
 	srv.mu.Lock()
 	// attempt to get cached workflow
-	retWorkflow, _ := srv.workflows[workflowNameKey]
-	retWorkflowConfig, _ := srv.workflowsConfig[workflowNameKey]
+	retWorkflow := srv.workflows[workflowNameKey]
+	retWorkflowConfig := srv.workflowsConfig[workflowNameKey]
 	srv.mu.Unlock()
 
 	return retWorkflow, retWorkflowConfig

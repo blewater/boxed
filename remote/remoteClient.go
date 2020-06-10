@@ -24,7 +24,6 @@ const ConfigRemoteMessengerKey = "remoteMessenger"
 type Remote struct {
 	ctx                  context.Context
 	gRPCRemote           wrpc.TaskCommunicatorClient
-	messenger            *wrpc.RemoteMessenger
 	cfg                  types.TaskConfiguration
 	workflowNameKeyValue string
 	remoteTasksMap       RemoteTaskRunnersByKey
@@ -55,15 +54,14 @@ func (r *Remote) ProcessGRPCMessages() (err error) {
 	// Connect with streaming connection to the server
 	gRPCRemoteConnToSrv, err := r.gRPCRemote.RunWorkflow(r.ctx)
 	if err != nil {
-		log.Println(err, ", while calling server.RunWorkflow()")
+		log.ErrorLogLn(err, ", while calling server.RunWorkflow()")
 
 		return err
 	}
 
-	defer gRPCRemoteConnToSrv.CloseSend()
+	defer func() { _ = gRPCRemoteConnToSrv.CloseSend() }()
 
-	var messenger types.MsgToSrv
-	messenger = r.getRemoteMessenger(gRPCRemoteConnToSrv)
+	var messenger types.MsgToSrv = r.getRemoteMessenger(gRPCRemoteConnToSrv)
 
 	if err = messenger.SendWorkflowNameKeyToSrv(r.workflowNameKeyValue); err != nil {
 		return err
@@ -114,13 +112,6 @@ func recoverFromPanic(errRef *error) {
 			*errRef = err
 			return
 		}
-	}
-}
-
-func endRemoteToSrvConnection(remoteToSrvConn wrpc.TaskCommunicator_RunWorkflowClient) {
-	err := remoteToSrvConn.CloseSend()
-	if err != nil {
-		log.Println(err, "failed to close remote connection to the server")
 	}
 }
 

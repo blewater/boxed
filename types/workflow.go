@@ -39,7 +39,7 @@ type Workflow struct {
 
 	// Persisted in mongo
 	ID                     primitive.ObjectID `bson:"_id" json:"_id"`     // Unique managed automatically by mongo driver
-	Name                   string             `bson:"name" json:"tasks"`  // Unique user provided workflow Id, and employed as key within server workflows map.
+	Name                   string             `bson:"name" json:"name"`   // Unique user provided workflow Id, and employed as key within server workflows map.
 	Tasks                  []*TaskType        `bson:"tasks" json:"tasks"` // Task names persisted in mongo
 	TasksConfig            TaskConfiguration  `bson:"tasksConfig" json:"tasksConfig"`
 	LastTaskIndexCompleted int                `bson:"lastTaskIndexCompleted" json:"lastTaskIndexCompleted"`
@@ -50,8 +50,8 @@ type Workflow struct {
 	UpdatedAt              time.Time          `bson:"updatedAt" json:"updatedAt"`
 
 	// Memory transient interfaces
-	TaskRunners  []TaskRunner `bson:"-" json:"-"`
-	srvMessenger MsgToRemote  `bson:"-" json:"-"`
+	TaskRunners  []TaskRunner `bson:"-"`
+	srvMessenger MsgToRemote  `bson:"-"`
 }
 
 // NewWorkflow gets a new initialized workflow struct
@@ -296,23 +296,9 @@ func (workflow *Workflow) CopyRemoteTasksProgress(remoteMsg *wrpc.RemoteMsg) err
 		if nextRemoteTask.Completed {
 			log.Println("Remote task:", strings.TrimSpace(nextWorkflowTask.Name), "completed.")
 		}
-
-		// TODO is this needed anymore?
-		// workflow.saveRemoteConfigResults(remoteMsg)
 	}
 
 	return nil
-}
-
-// Save Remote Workflow TasksConfig Results Here
-// Remote Task config answers -> workflow changes of the current tasks[LastIndexCompleted]
-// Checks if it's a Remote task and completed
-func (workflow *Workflow) saveRemoteConfigResults(remoteMsg *wrpc.RemoteMsg) {
-	cliTask := workflow.Tasks[workflow.LastTaskIndexCompleted]
-	if cliTask.Completed && !cliTask.IsServer {
-		cliTaskRunner := workflow.TaskRunners[workflow.LastTaskIndexCompleted]
-		cliTaskRunner.PostRemoteTasksCompletion(remoteMsg)
-	}
 }
 
 // SetWorkflowCompletedChecked checks if the lastTaskIndexCompleted has progressed past
