@@ -99,3 +99,23 @@ func (t *TaskType) setCompleted() {
 		t.Completed = true
 	}
 }
+
+func (t *TaskType) DisplayStatus() string {
+	if t.Completed && t.Log == "" {
+		return ascii.Green(fmt.Sprintf("Successful Run\n%s", t.CompletedAt.Format("Jan 02 15:04:05.000")))
+	}
+
+	if t.Completed {
+		return ascii.Red(fmt.Sprintf("Failed %s\n", t.CompletedAt.Format("Jan 02 15:04:05.000")))
+	}
+
+	return ascii.Yellow("Pending...")
+}
+
+func (t *TaskType) DisplayType() string {
+	if t.IsServer {
+		return ascii.Blue("Server")
+	}
+
+	return ascii.Blue("Remote")
+}
