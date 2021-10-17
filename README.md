@@ -30,11 +30,19 @@ Because running asynchronous distributed activities as a cohesive linear workflo
 * Any loosely-coupled server to remote activities.
 
 ## Examples
-* _~Guess~_[Hack the shared (Diffie-Hellman) secret.](https://github.com/tradeline-tech/workflow/tree/development/examples/secret) (_crack the secret exchanging algorithm with your coding add-on, and we will feature your solution_).
+* [Diffie-Hellman identification protocol with Knowledge-of-Exponent proof](https://github.com/blewater/boxed/tree/development/examples/secret)
+```
+For a generator g of group G; 
 
-* Distributed Containers deployment.
+Prover knows exponent x in y=g^x
+1. Verifier selects a randomly k value, and sends v=g^k to the prover.
+2. Prover evaluates r=v^x and sends it to the verifier.
+3. Verifier accepts iff r=yk.
+```
 
-* Remote Tic-tac-toe play.
+* Distributed Containers deployment. (Not Implemented Yet).
+
+* Remote Tic-tac-toe play. (Not Implemented Yet).
 
 ## Steps to create a workflow
 1. Declare your tasks _sequentially_.
